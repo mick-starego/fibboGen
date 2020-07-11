@@ -3,6 +3,9 @@
 
 #include <iostream>
 #include <vector>
+#include <unordered_set>
+#include <unordered_map>
+#include "TreeNode.h"
 
 using namespace std;
 
@@ -16,13 +19,18 @@ class FibboGen {
         void setStart(int start);
         int getTarget();
         void setTarget(int target);
+        int getStep();
+        TreeNode* getParentNode();
 
-        bool solve();
         void clear();
         bool isSolved();
-        int countSolutions();
+        void generateSolutionTree();
+        void prune();
 
         void printMoves();
+        void printBoardStateCounts();
+        TreeNode* getNodeByData(TreeNode* node, int data);
+        string constructBoardString(int enc);
 
     private:
         bool* board;
@@ -36,17 +44,35 @@ class FibboGen {
         int start;
         int target;
         int solutions;
-        vector<string> moves;
         bool solved;
+        int step;
+        TreeNode* parentNode;
+        TreeNode* head;
+        unordered_set<TreeNode*> allPointers;
+
+        vector<string> moves;
+        vector< unordered_set<int>* > boardStates;
+        vector< unordered_map<int, TreeNode*>* > boardNodes;
+        vector<TreeNode*> path;
+
+        int pruneHelperCount;
 
         void setDirections();
         int calculateSize(int order) const;
         void resetBoard();
+        void setBoard(int enc);
 
-        bool backtrack();
+        void backtrack(int step);
         int findPos(bool* ptr);
         bool checkSolved();
         string boardString(int position);
+        int encodeCurrentBoard();
+        void pruneHelper(TreeNode* node, unordered_set<TreeNode*>* stagedForDelete);
+        void removeNullChildren(TreeNode* node);
+        void deleteDeadNodes(unordered_set<TreeNode*>* stagedForDelete);
+
+        void populateAllPointers(TreeNode* node);
+        void destroyTree();
 
 };
 

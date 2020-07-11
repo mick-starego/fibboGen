@@ -6,8 +6,12 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <bitset>
+#include <stdlib.h>
+#include <time.h>
 
 #include "FibboGen.h"
+#include "TreeNode.h"
 
 using namespace std;
 
@@ -27,8 +31,15 @@ FibboGen::FibboGen(int start, int order) {
     board[start] = false;
 
     solutions = 0;
+    step = -1;
+    parentNode = NULL;
+    head = NULL;
 
     setDirections();
+
+    for (int i = 0; i < size - 2; i++) {
+        boardStates.push_back(new unordered_set<int>());
+    }
 }
 
 FibboGen::~FibboGen() {
@@ -36,6 +47,44 @@ FibboGen::~FibboGen() {
     delete[] dirTwo;
     delete[] dirThree;
     delete[] board;
+
+    destroyTree();
+    for (int i = 0; i < size - 2; i++) {
+        delete boardStates[i];
+    }
+}
+
+void FibboGen::destroyTree() {
+    if (parentNode != NULL) {
+        populateAllPointers(parentNode);
+        unordered_set<TreeNode*>::iterator it = allPointers.begin();
+        for (; it != allPointers.end(); it++) {
+            delete *it;
+        }
+        delete parentNode;
+        parentNode = NULL;
+        head = NULL;
+        allPointers.clear();
+        for (int i = 0; i < size - 2; i++) {
+            delete boardStates[i];
+        }
+        boardStates.clear();
+        for (int i = 0; i < size - 2; i++) {
+            boardStates.push_back(new unordered_set<int>());
+        }
+    }
+}
+
+void FibboGen::populateAllPointers(TreeNode* node) {
+    if (node->getNumChildren() == 0) {
+        allPointers.insert(node);
+    } else {
+        vector<TreeNode*>::iterator it = node->getChildrenBegin();
+        for (; it != node->getChildrenEnd(); it++) {
+            populateAllPointers(*it);
+            allPointers.insert(*it);
+        }
+    }
 }
 
 void FibboGen::setDirections() {
@@ -120,112 +169,12 @@ int FibboGen::calculateSize(int order) const {
     return sum;
 }
 
-//! Solve the puzzle. Sets moves, solveTime, and solved
-/*!
- * Solves the puzzle unless the target position is not in 
- * the positions set. In this case, this method will return
- * false.
- *
- * If the target position is in the positions set, the following
- * operations will occur:
- *
- * 1. All solution variables (moves, solved, solveTime) are
- *    reset to thier initial values.
- * 2. The board is reset to its initial value; that is, all
- *    spaces on the board except for the starting position
- * 3. The puzzle is solved using backtrack() and each move is
- *    pushed onto the moves vector, which acts as a stack (the
- *    last element in moves is the first move)
- * 4. solveTime is set
- * 5. solved is set to true if there are 14 moves on the stack,
- *    false otherwise.
- * 6. Reset the board to its initial value.
- * 
- * \todo Create string representation for end position of the puzzle
- *
- * \returns solved
- */
-bool FibboGen::solve() {
-    
-    // Check if target is in positions. If not, return false
-    //! \todo uncomment
-    // if (positions.find(target) == positions.end()) {
-    //     return false;
-    // }
-
-    // Clear all solution variables and reset the board
-    clear();
-
-    // Store the starting position of the board. Bocktrack will
-    // not push this position onto the moves stack. It will be 
-    // pushed individually after backtrack exits. An argument of
-    // -1 to boardString indicates that no position should be 
-    // highlighted.
-    string startPos = boardString(-1);
-
-    //! TODO: Create a string representation of the end position of
-    // the puzzle.
-    // Here is where this string is pushed onto moves
-    moves.push_back("END");
-
-    backtrack();
-
-    moves.push_back(startPos); // push the startPos onto stack
-
-    solved = moves.size() == size;
-
-    // Reset the board to its initial state
-    resetBoard();
-
-    return solved;
-}
-
-//! Counts the number of solutions from the start point
-/*!
- * Returns the number of soultions with a given start point.
- * Does not change the state of any instance variables. This
- * method may take about 0.2 seconds to complete.
- * 
- * This method is only meant to be used for testing to ensure 
- * that backtrack is capable of finding all possible solutions. 
- * The values it produces can be compared to those at 
- * http://peggamesolutions.com/index.html.
- *
- * NOTE: The solutions variable in Peg is only meant to be
- * accessed by this method. Outside of this method, it
- * will always be set to zero. Its only purpose is to keep
- * a running count of solutions during one run of backtrack.
- *
- * \returns number of a soulutions from the start point
- * 
- */
-int FibboGen::countSolutions() {
-
-    // Reset board to its initial position. Even though
-    // the board should already be in this state, this should
-    // always be done before calling backtrack.
-    resetBoard();
-
-    solutions = 0;
-
-    // This method needs to call backtrack with a target of -1, so that
-    // it does not stop on any one solution and instead cycles through
-    // all of them. This method should not change the value 
-    // of target, so its original value is stored and reset after
-    // backtrack is called.
-    int originalTarget = target;
-    target = -1;
-
-    // Backtrack is called with setPositions=false and target=-1.
-    // This tells backtrack to NOT manipulate positions or moves, 
-    // to not stop after finding one solution, and to keep a running
-    // total of the number solutions found using the solutions 
-    // instance variable.
-    backtrack();
-
-    target = originalTarget; // reset target
-
-    return solutions;
+void FibboGen::setBoard(int enc) {
+    enc /= 2;
+    for (int i = size - 1; i >= 0; i--) {
+        board[i] = enc % 2;
+        enc /= 2;
+    }
 }
 
 //! Resets the board to its initial state
@@ -237,7 +186,9 @@ void FibboGen::resetBoard() {
     for (int i = 0; i < size; i++) {
         board[i] = true;
     }
-    board[start] = false;
+    if (start >= 0) {
+        board[start] = false;
+    }
 }
 
 //! Clear all solution variables
@@ -247,10 +198,7 @@ void FibboGen::resetBoard() {
  * initial state.
  */
 void FibboGen::clear() {
-    moves.clear();
-    solved = false;
     resetBoard();
-    solutions = 0;
 }
 
 //! Access private member solved
@@ -311,9 +259,55 @@ void FibboGen::setTarget(int target) {
     clear();
 }
 
-bool FibboGen::backtrack() {
+int FibboGen::getStep() {
+    return step;
+}
+
+TreeNode* FibboGen::getParentNode() {
+    return parentNode;
+}
+
+void FibboGen::generateSolutionTree() {
+    resetBoard();
+
+    destroyTree();
+    head = new TreeNode(encodeCurrentBoard(), 0);
+    parentNode = head;
+    backtrack(1);
+
+    for (int i = 1; i < size - 2; i++) {
+        unordered_set<int>* boards = boardStates[i - 1];
+        unordered_set<int>::iterator it = boards->begin();
+        for (; it != boards->end(); it++) {
+            parentNode = getNodeByData(head, *it);
+            setBoard(*it);
+            backtrack(parentNode->getStep() + 1);
+        }
+    }
+
+    parentNode = head;
+    prune();
+}
+
+TreeNode* FibboGen::getNodeByData(TreeNode* node, int data) {
+    if (node->getData() == data) {
+        return node;
+    } else if (node->getNumChildren() == 0) {
+        return NULL;
+    } else {
+        vector<TreeNode*>::iterator it = node->getAllChildren().begin();
+        for (; it != node->getAllChildren().end(); it++) {
+            TreeNode* foundNode = getNodeByData(*it, data);
+            if (foundNode != NULL) {
+                return foundNode;
+            }
+        }
+        return NULL;
+    }
+}
+
+void FibboGen::backtrack(int step) {
     bool* (*dir) = NULL;
-    bool _solved = false;
 
     for (int d = 0; d < 3; d++) {
 
@@ -333,38 +327,43 @@ bool FibboGen::backtrack() {
                 *(dir[i+1]) = 0;
                 *(dir[i+2]) = 1;
                 
-                // Check if this move solved the puzzle or keep backtracking
-                if ( (checkSolved() && target != -1) || backtrack()) {
-                    _solved = true;
-                    moves.push_back(boardString(findPos(dir[i+2]))); // push move onto stack
+                if (boardStates[step - 1]->count(encodeCurrentBoard()) != 0) {
+                    TreeNode* existingNode = getNodeByData(head, encodeCurrentBoard());
+                    parentNode->addChild(existingNode);
+                    existingNode->setParent(parentNode);
+                } else {
+                    TreeNode* newNode = new TreeNode(encodeCurrentBoard(), step);
+                    boardStates[step - 1]->insert(encodeCurrentBoard());
+                    parentNode->addChild(newNode);
+                    newNode->setParent(parentNode);
                 }
 
                 *(dir[i]) = 1;
                 *(dir[i+1]) = 1;
                 *(dir[i+2]) = 0;
-
-                if (_solved) return true; // exit and backtrack out if solved
                 
             } else if (*(dir[i]) == 0 && *(dir[i+1]) == 1 && *(dir[i+2]) == 1) {
                 *(dir[i]) = 1;
                 *(dir[i+1]) = 0;
                 *(dir[i+2]) = 0;
 
-                // Check if this move solved the puzzle or keep backtracking
-                if ( (checkSolved() && target != -1) || backtrack()) {
-                    _solved = true;
-                    moves.push_back(boardString(findPos(dir[i]))); // push move onto stack
+                if (boardStates[step - 1]->count(encodeCurrentBoard()) != 0) {
+                    TreeNode* existingNode = getNodeByData(head, encodeCurrentBoard());
+                    parentNode->addChild(existingNode);
+                    existingNode->setParent(parentNode);
+                } else {
+                    TreeNode* newNode = new TreeNode(encodeCurrentBoard(), step);
+                    boardStates[step - 1]->insert(encodeCurrentBoard());
+                    parentNode->addChild(newNode);
+                    newNode->setParent(parentNode);
                 }
                 
                 *(dir[i]) = 0;
                 *(dir[i+1]) = 1;
                 *(dir[i+2]) = 1;
-
-                if (_solved) return true;
             }
         }
     }
-    return false;
 }
 
 int FibboGen::findPos(bool* ptr) {
@@ -393,6 +392,64 @@ bool FibboGen::checkSolved() {
         }
     }
     return false;
+}
+
+int FibboGen::encodeCurrentBoard() {
+    int enc = 2;
+    for (int i = 0; i < size; i++) {
+        if (board[i] == 1) {
+            enc++;
+        }
+        enc *= 2;
+    }
+    return enc;
+}
+
+void FibboGen::prune() {
+    unordered_set<TreeNode*>* stagedForDelete = new unordered_set<TreeNode*>();
+    pruneHelper(parentNode, stagedForDelete);
+    deleteDeadNodes(stagedForDelete);
+    removeNullChildren(parentNode);
+    delete stagedForDelete;
+}
+
+void FibboGen::pruneHelper(TreeNode* node, unordered_set<TreeNode*>* stagedForDelete) {
+    if (node->getStep() == 13) {
+        return;
+    } else if (node->getNumChildren() == 0) {
+        TreeNode* parent = path.back();
+        parent->deleteChild(node);
+        stagedForDelete->insert(node);
+    } else {
+        path.push_back(node);
+        vector<TreeNode*>::iterator it = node->getChildrenBegin();
+        for (; it != node->getChildrenEnd(); it++) {
+            TreeNode* child = *it;
+            if (child != NULL) {
+                pruneHelper(child, stagedForDelete);
+            }
+        }
+        path.pop_back();
+        if (node->getNumChildren() == 0) {
+            path.back()->deleteChild(node);
+            stagedForDelete->insert(node);
+        }
+    }
+}
+
+void FibboGen::removeNullChildren(TreeNode* node) {
+    node->removeNullChildren();
+    vector<TreeNode*>::iterator it = node->getChildrenBegin();
+    for (; it != node->getChildrenEnd(); it++) {
+        removeNullChildren(*it);
+    }
+}
+
+void FibboGen::deleteDeadNodes(unordered_set<TreeNode*>* stagedForDelete) {
+    unordered_set<TreeNode*>::iterator it = stagedForDelete->begin();
+    for (; it != stagedForDelete->end(); it++) {
+        delete *it;
+    }
 }
 
 string FibboGen::boardString(int position) {
@@ -442,42 +499,180 @@ void FibboGen::printMoves() {
     }
 }
 
-void test() {
-    FibboGen gen(0, 5);
-    int sol = gen.countSolutions();
-    if (sol == 29760) {
-        cout << "PASS Start Position 0" << endl;
-    } else {
-        cout << "FAIL Start Position 0 Yielded " << sol << " solutions" << endl;
+void FibboGen::printBoardStateCounts() {
+    for (int i = 0; i < size - 2; i++) {
+        cout << "Move " << i + 1 << ": " << boardStates[i]->size() << endl;
     }
-
-    gen.setStart(1);
-    sol = gen.countSolutions();
-    if (sol == 14880) {
-        cout << "PASS Start Position 1" << endl;
-    } else {
-        cout << "FAIL Start Position 1 Yielded " << sol << " solutions" << endl;
-    }
-
-    gen.setStart(3);
-    sol = gen.countSolutions();
-    if (sol == 85258) {
-        cout << "PASS Start Position 3" << endl;
-    } else {
-        cout << "FAIL Start Position 3 Yielded " << sol << " solutions" << endl;
-    }
-
-    gen.setStart(4);
-    sol = gen.countSolutions();
-    if (sol == 1550) {
-        cout << "PASS Start Position 4" << endl;
-    } else {
-        cout << "FAIL Start Position 4 Yielded " << sol << " solutions" << endl;
+    unordered_set<int>::iterator it = boardStates.back()->begin();
+    for (; it != boardStates.back()->end(); it++) {
+        bitset<32> x(*it);
+        cout << x << endl;
     }
 }
 
+string FibboGen::constructBoardString(int enc) {
+    bool tempBoard[size];
+    for (int i = 0; i < size; i++) {
+        tempBoard[i] = board[i];
+    }
+    setBoard(enc);
+    string s = boardString(-1);
+    for (int i = 0; i < size; i++) {
+        board[i] = tempBoard[i];
+    }
+    return s;
+}
+
+int countPathsToBottom(TreeNode* node) {
+    if (node->getNumChildren() == 0) {
+        return 1;
+    } else {
+        vector<TreeNode*>::iterator it = node->getChildrenBegin();
+        int count = 0;
+        for (; it != node->getChildrenEnd(); it++) {
+            count += countPathsToBottom(*it);
+        }
+        return count;
+    }
+}
+
+int countNodesOnBottom(TreeNode* node) {
+    if (node->getNumChildren() == 0 && !node->ignore()) {
+        return 1;
+    } else {
+        vector<TreeNode*>::iterator it = node->getChildrenBegin();
+        int count = 0;
+        for (; it != node->getChildrenEnd(); it++) {
+            count += countNodesOnBottom(*it);
+        }
+        return count;
+    }
+}
+
+void test1() {
+    FibboGen gen(0, 5);
+    bool allSuccess = true;
+    int paths = 0;
+    int bottomNodes = 0;
+
+    gen.generateSolutionTree();
+    paths = countPathsToBottom(gen.getParentNode());
+    bottomNodes = countNodesOnBottom(gen.getParentNode());
+    if (paths == 29760) {
+        cout << "PASS Start Position 0 Correct Number of Paths" << endl;
+    } else {
+        allSuccess = false;
+        cout << "FAIL Start Position 0 Yielded " << paths << " paths" << endl;
+    }
+    if (bottomNodes == 4) {
+        cout << "PASS Start Position 0 Correct Number of Bottom Nodes" << endl;
+    } else {
+        allSuccess = false;
+        cout << "FAIL Start Position 0 Yielded " << bottomNodes << " bottom nodes" << endl;
+    }
+
+    gen.setStart(1);
+    gen.generateSolutionTree();
+    paths = countPathsToBottom(gen.getParentNode());
+    bottomNodes = countNodesOnBottom(gen.getParentNode());
+    if (paths == 14880) {
+        cout << "PASS Start Position 1 Correct Number of Paths" << endl;
+    } else {
+        allSuccess = false;
+        cout << "FAIL Start Position 1 Yielded " << paths << " paths" << endl;
+    }
+    if (bottomNodes == 4) {
+        cout << "PASS Start Position 1 Correct Number of Bottom Nodes" << endl;
+    } else {
+        allSuccess = false;
+        cout << "FAIL Start Position 1 Yielded " << bottomNodes << " bottom nodes" << endl;
+    }
+
+    gen.setStart(3);
+    gen.generateSolutionTree();
+    paths = countPathsToBottom(gen.getParentNode());
+    bottomNodes = countNodesOnBottom(gen.getParentNode());
+    if (countPathsToBottom(gen.getParentNode()) == 85258) {
+        cout << "PASS Start Position 3 Correct Number of Paths" << endl;
+    } else {
+        allSuccess = false;
+        cout << "FAIL Start Position 3 Yielded " << paths << " paths" << endl;
+    }
+    if (bottomNodes == 5) {
+        cout << "PASS Start Position 3 Correct Number of Bottom Nodes" << endl;
+    } else {
+        allSuccess = false;
+        cout << "FAIL Start Position 3 Yielded " << bottomNodes << " bottom nodes" << endl;
+    }
+
+    gen.setStart(4);
+    gen.generateSolutionTree();
+    paths = countPathsToBottom(gen.getParentNode());
+    bottomNodes = countNodesOnBottom(gen.getParentNode());
+    if (countPathsToBottom(gen.getParentNode()) == 1550) {
+        cout << "PASS Start Position 4 Correct Number of Paths" << endl;
+    } else {
+        allSuccess = false;
+        cout << "FAIL Start Position 4 Yielded " << paths << " paths" << endl;
+    }
+    if (bottomNodes == 1) {
+        cout << "PASS Start Position 4 Correct Number of Bottom Nodes" << endl;
+    } else {
+        allSuccess = false;
+        cout << "FAIL Start Position 4 Yielded " << bottomNodes << " bottom nodes" << endl;
+    }
+
+    if (allSuccess) {
+        cout << endl << "SUCCESS All tests passed" << endl;
+    } else {
+        cout << endl << "FAIL All tests DID NOT pass" << endl;
+    }
+}
+
+void test2() {
+    FibboGen gen(0, 5);
+    int paths = 0;
+    int bottomNodes = 0;
+
+    int expectedNumPaths = (29760 * 3) + (85258 * 3) + (1550 * 3) + (14880 * 6);
+    int expectedBottomNodes = 15;
+
+    gen.generateSolutionTree();
+    paths = countPathsToBottom(gen.getParentNode());
+    bottomNodes = countNodesOnBottom(gen.getParentNode());
+    if (paths == expectedNumPaths) {
+        cout << "PASS Correct Number of Paths" << endl;
+    } else {
+        cout << "FAIL Yielded " << paths << " paths, expected " << expectedNumPaths << endl;
+    }
+    if (bottomNodes == expectedBottomNodes) {
+        cout << "PASS Correct Number of Bottom Nodes" << endl;
+    } else {
+        cout << "FAIL Yielded " << bottomNodes << " bottom nodes, expected " << expectedBottomNodes << endl;
+    }
+}
+
+void generate() {
+    srand(time(NULL));
+
+    FibboGen gen(rand() % 15, 5);
+    gen.generateSolutionTree();
+    TreeNode* head = gen.getParentNode();
+
+    string buffer = gen.constructBoardString(head->getData());
+
+    TreeNode* selectedNode = head;
+    for (int i = 0; i < 13; i++) {
+        int selector = rand() % selectedNode->getNumChildren();
+        selectedNode = selectedNode->getChildByIndex(selector);
+        buffer += gen.constructBoardString(selectedNode->getData());
+    }
+    cout << buffer << endl;
+}
+
 int main(int argc, char** argv) {
-    test();
+    test1();
+    // generate();
 
     return 0;
 }
