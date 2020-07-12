@@ -12,7 +12,7 @@ using namespace std;
 class FibboGen {
 
     public:
-        FibboGen(int start, int order);
+        FibboGen(int order);
         ~FibboGen();
         
         int getStart();
@@ -20,7 +20,9 @@ class FibboGen {
         int getTarget();
         void setTarget(int target);
         int getStep();
+        int getNodeCount();
         TreeNode* getParentNode();
+        unordered_set<TreeNode*>& getAllNodes();
 
         void clear();
         bool isSolved();
@@ -51,11 +53,8 @@ class FibboGen {
         unordered_set<TreeNode*> allPointers;
 
         vector<string> moves;
-        vector< unordered_set<int>* > boardStates;
         vector< unordered_map<int, TreeNode*>* > boardNodes;
         vector<TreeNode*> path;
-
-        int pruneHelperCount;
 
         void setDirections();
         int calculateSize(int order) const;

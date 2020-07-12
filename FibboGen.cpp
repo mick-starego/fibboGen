@@ -9,15 +9,17 @@
 #include <bitset>
 #include <stdlib.h>
 #include <time.h>
+#include <iostream>
+#include <fstream>
 
 #include "FibboGen.h"
 #include "TreeNode.h"
 
 using namespace std;
 
-FibboGen::FibboGen(int start, int order) {
+FibboGen::FibboGen(int order) {
 
-    this->start = start;
+    this->start = -1;
     this->target = -1;
 
     this->order = order;
@@ -28,7 +30,6 @@ FibboGen::FibboGen(int start, int order) {
     for (int i = 0; i < size; i++) {
         board[i] = true;
     }
-    board[start] = false;
 
     solutions = 0;
     step = -1;
@@ -38,7 +39,7 @@ FibboGen::FibboGen(int start, int order) {
     setDirections();
 
     for (int i = 0; i < size - 1; i++) {
-        boardStates.push_back(new unordered_set<int>());
+        boardNodes.push_back(new unordered_map<int, TreeNode*>());
     }
 }
 
@@ -50,7 +51,7 @@ FibboGen::~FibboGen() {
 
     destroyTree();
     for (int i = 0; i < size - 1; i++) {
-        delete boardStates[i];
+        delete boardNodes[i];
     }
 }
 
@@ -66,11 +67,11 @@ void FibboGen::destroyTree() {
         head = NULL;
         allPointers.clear();
         for (int i = 0; i < size - 1; i++) {
-            delete boardStates[i];
+            delete boardNodes[i];
         }
-        boardStates.clear();
+        boardNodes.clear();
         for (int i = 0; i < size - 1; i++) {
-            boardStates.push_back(new unordered_set<int>());
+            boardNodes.push_back(new unordered_map<int, TreeNode*>());
         }
     }
 }
@@ -85,6 +86,14 @@ void FibboGen::populateAllPointers(TreeNode* node) {
             allPointers.insert(*it);
         }
     }
+}
+
+int FibboGen::getNodeCount() {
+    allPointers.clear();
+    populateAllPointers(parentNode);
+    int count = allPointers.size();
+    allPointers.clear();
+    return count;
 }
 
 void FibboGen::setDirections() {
@@ -279,16 +288,15 @@ void FibboGen::generateSolutionTree() {
         setStart(i);
         TreeNode* newNode = new TreeNode(encodeCurrentBoard(), 1);
         parentNode->addChild(newNode);
-        boardStates[0]->insert(encodeCurrentBoard());
+        boardNodes[0]->insert({encodeCurrentBoard(), newNode});
     }
 
     for (int i = 1; i < size - 1; i++) {
-        cout << "Starting step " << i << " of " << size - 1 << endl;
-        unordered_set<int>* boards = boardStates[i - 1];
-        unordered_set<int>::iterator it = boards->begin();
+        unordered_map<int, TreeNode*>* boards = boardNodes[i - 1];
+        unordered_map<int, TreeNode*>::iterator it = boards->begin();
         for (; it != boards->end(); it++) {
-            parentNode = getNodeByData(head, *it);
-            setBoard(*it);
+            parentNode = it->second;
+            setBoard(it->first);
             backtrack(parentNode->getStep() + 1);
         }
     }
@@ -334,16 +342,15 @@ void FibboGen::backtrack(int step) {
                 *(dir[i]) = 0;
                 *(dir[i+1]) = 0;
                 *(dir[i+2]) = 1;
+                unordered_map<int, TreeNode*>::iterator it = boardNodes[step - 1]->find(encodeCurrentBoard());
                 
-                if (boardStates[step - 1]->count(encodeCurrentBoard()) != 0) {
-                    TreeNode* existingNode = getNodeByData(head, encodeCurrentBoard());
+                if (it != boardNodes[step - 1]->end()) {
+                    TreeNode* existingNode = it->second;
                     parentNode->addChild(existingNode);
-                    existingNode->setParent(parentNode);
                 } else {
                     TreeNode* newNode = new TreeNode(encodeCurrentBoard(), step);
-                    boardStates[step - 1]->insert(encodeCurrentBoard());
+                    boardNodes[step - 1]->insert({encodeCurrentBoard(), newNode});
                     parentNode->addChild(newNode);
-                    newNode->setParent(parentNode);
                 }
 
                 *(dir[i]) = 1;
@@ -354,16 +361,15 @@ void FibboGen::backtrack(int step) {
                 *(dir[i]) = 1;
                 *(dir[i+1]) = 0;
                 *(dir[i+2]) = 0;
+                unordered_map<int, TreeNode*>::iterator it = boardNodes[step - 1]->find(encodeCurrentBoard());
 
-                if (boardStates[step - 1]->count(encodeCurrentBoard()) != 0) {
-                    TreeNode* existingNode = getNodeByData(head, encodeCurrentBoard());
+                if (it != boardNodes[step - 1]->end()) {
+                    TreeNode* existingNode = it->second;
                     parentNode->addChild(existingNode);
-                    existingNode->setParent(parentNode);
                 } else {
                     TreeNode* newNode = new TreeNode(encodeCurrentBoard(), step);
-                    boardStates[step - 1]->insert(encodeCurrentBoard());
+                    boardNodes[step - 1]->insert({encodeCurrentBoard(), newNode});
                     parentNode->addChild(newNode);
-                    newNode->setParent(parentNode);
                 }
                 
                 *(dir[i]) = 0;
@@ -415,7 +421,6 @@ int FibboGen::encodeCurrentBoard() {
 
 void FibboGen::prune() {
     unordered_set<TreeNode*>* stagedForDelete = new unordered_set<TreeNode*>();
-    pruneHelperCount = 0;
     pruneHelper(parentNode, stagedForDelete);
     deleteDeadNodes(stagedForDelete);
     removeNullChildren(parentNode);
@@ -510,11 +515,11 @@ void FibboGen::printMoves() {
 
 void FibboGen::printBoardStateCounts() {
     for (int i = 0; i < size - 2; i++) {
-        cout << "Move " << i + 1 << ": " << boardStates[i]->size() << endl;
+        cout << "Move " << i + 1 << ": " << boardNodes[i]->size() << endl;
     }
-    unordered_set<int>::iterator it = boardStates.back()->begin();
-    for (; it != boardStates.back()->end(); it++) {
-        bitset<32> x(*it);
+    unordered_map<int, TreeNode*>::iterator it = boardNodes.back()->begin();
+    for (; it != boardNodes.back()->end(); it++) {
+        bitset<32> x(it->first);
         cout << x << endl;
     }
 }
@@ -530,6 +535,16 @@ string FibboGen::constructBoardString(int enc) {
         board[i] = tempBoard[i];
     }
     return s;
+}
+
+unordered_set<TreeNode*>& FibboGen::getAllNodes() {
+    unordered_set<TreeNode*>& allNodes = *(new unordered_set<TreeNode*>());
+    allPointers.clear();
+    populateAllPointers(parentNode);
+    allNodes = allPointers;
+    allNodes.insert(parentNode);
+    allPointers.clear();
+    return allNodes;
 }
 
 int countPathsToBottom(TreeNode* node) {
@@ -558,88 +573,8 @@ int countNodesOnBottom(TreeNode* node) {
     }
 }
 
-void test1() {
-    FibboGen gen(0, 5);
-    bool allSuccess = true;
-    int paths = 0;
-    int bottomNodes = 0;
-
-    gen.generateSolutionTree();
-    paths = countPathsToBottom(gen.getParentNode());
-    bottomNodes = countNodesOnBottom(gen.getParentNode());
-    if (paths == 29760) {
-        cout << "PASS Start Position 0 Correct Number of Paths" << endl;
-    } else {
-        allSuccess = false;
-        cout << "FAIL Start Position 0 Yielded " << paths << " paths" << endl;
-    }
-    if (bottomNodes == 4) {
-        cout << "PASS Start Position 0 Correct Number of Bottom Nodes" << endl;
-    } else {
-        allSuccess = false;
-        cout << "FAIL Start Position 0 Yielded " << bottomNodes << " bottom nodes" << endl;
-    }
-
-    gen.setStart(1);
-    gen.generateSolutionTree();
-    paths = countPathsToBottom(gen.getParentNode());
-    bottomNodes = countNodesOnBottom(gen.getParentNode());
-    if (paths == 14880) {
-        cout << "PASS Start Position 1 Correct Number of Paths" << endl;
-    } else {
-        allSuccess = false;
-        cout << "FAIL Start Position 1 Yielded " << paths << " paths" << endl;
-    }
-    if (bottomNodes == 4) {
-        cout << "PASS Start Position 1 Correct Number of Bottom Nodes" << endl;
-    } else {
-        allSuccess = false;
-        cout << "FAIL Start Position 1 Yielded " << bottomNodes << " bottom nodes" << endl;
-    }
-
-    gen.setStart(3);
-    gen.generateSolutionTree();
-    paths = countPathsToBottom(gen.getParentNode());
-    bottomNodes = countNodesOnBottom(gen.getParentNode());
-    if (countPathsToBottom(gen.getParentNode()) == 85258) {
-        cout << "PASS Start Position 3 Correct Number of Paths" << endl;
-    } else {
-        allSuccess = false;
-        cout << "FAIL Start Position 3 Yielded " << paths << " paths" << endl;
-    }
-    if (bottomNodes == 5) {
-        cout << "PASS Start Position 3 Correct Number of Bottom Nodes" << endl;
-    } else {
-        allSuccess = false;
-        cout << "FAIL Start Position 3 Yielded " << bottomNodes << " bottom nodes" << endl;
-    }
-
-    gen.setStart(4);
-    gen.generateSolutionTree();
-    paths = countPathsToBottom(gen.getParentNode());
-    bottomNodes = countNodesOnBottom(gen.getParentNode());
-    if (countPathsToBottom(gen.getParentNode()) == 1550) {
-        cout << "PASS Start Position 4 Correct Number of Paths" << endl;
-    } else {
-        allSuccess = false;
-        cout << "FAIL Start Position 4 Yielded " << paths << " paths" << endl;
-    }
-    if (bottomNodes == 1) {
-        cout << "PASS Start Position 4 Correct Number of Bottom Nodes" << endl;
-    } else {
-        allSuccess = false;
-        cout << "FAIL Start Position 4 Yielded " << bottomNodes << " bottom nodes" << endl;
-    }
-
-    if (allSuccess) {
-        cout << endl << "SUCCESS All tests passed" << endl;
-    } else {
-        cout << endl << "FAIL All tests DID NOT pass" << endl;
-    }
-}
-
-void test2() {
-    FibboGen gen(0, 5);
+void test() {
+    FibboGen gen(5);
     int paths = 0;
     int bottomNodes = 0;
 
@@ -662,26 +597,47 @@ void test2() {
 }
 
 void generate() {
-    // srand(time(NULL));
+    srand(time(NULL));
 
-    // FibboGen gen(rand() % 15, 5);
-    // gen.generateSolutionTree();
-    // TreeNode* head = gen.getParentNode();
+    FibboGen gen(5);
+    gen.generateSolutionTree();
+    TreeNode* head = gen.getParentNode();
 
-    // string buffer = gen.constructBoardString(head->getData());
+    string buffer = gen.constructBoardString(head->getData());
 
-    // TreeNode* selectedNode = head;
-    // for (int i = 0; i < 13; i++) {
-    //     int selector = rand() % selectedNode->getNumChildren();
-    //     selectedNode = selectedNode->getChildByIndex(selector);
-    //     buffer += gen.constructBoardString(selectedNode->getData());
-    // }
-    // cout << buffer << endl;
+    TreeNode* selectedNode = head;
+    for (int i = 0; i < 14; i++) {
+        int selector = rand() % selectedNode->getNumChildren();
+        selectedNode = selectedNode->getChildByIndex(selector);
+        buffer += gen.constructBoardString(selectedNode->getData());
+    }
+    cout << buffer << endl;
 }
 
 int main(int argc, char** argv) {
-    test2();
     // generate();
+    FibboGen gen(5);
+    gen.generateSolutionTree();
+    unordered_set<TreeNode*>& allNodes = gen.getAllNodes();
+    
+    ofstream file;
+    file.open("peg_solns.ts");
 
+    unordered_set<TreeNode*>::iterator it = allNodes.begin();
+    file << "export class PegData {\n\tstatic readonly DATA = new Map([\n";
+    for (; it != allNodes.end(); it++) {
+        file << "\t\t[ ";
+        file << (*it)->getData() << ", ";
+        vector<TreeNode*>::iterator children = (*it)->getChildrenBegin();
+        file << " [";
+        for (; children != (*it)->getChildrenEnd(); children++) {
+            file << (*children)->getData() << ", ";
+        }
+        file << "] ],\n";
+    }
+    file << "\t]);\n}";
+    file.close();
+
+    delete &allNodes;
     return 0;
 }
