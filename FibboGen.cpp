@@ -14,6 +14,7 @@
 
 #include "FibboGen.h"
 #include "TreeNode.h"
+#include "timer.h"
 
 using namespace std;
 
@@ -21,6 +22,7 @@ FibboGen::FibboGen(int order) {
 
     this->start = -1;
     this->target = -1;
+    count = 0;
 
     this->order = order;
     size = calculateSize(order);
@@ -56,8 +58,14 @@ FibboGen::~FibboGen() {
 }
 
 void FibboGen::destroyTree() {
+    cout << endl;
     if (parentNode != NULL) {
+        timer t;
+        t.start();
         populateAllPointers(parentNode);
+        t.stop();
+        cout << "All pointers populated in " << t << " milliseconds" << endl;
+
         unordered_set<TreeNode*>::iterator it = allPointers.begin();
         for (; it != allPointers.end(); it++) {
             delete *it;
@@ -77,13 +85,11 @@ void FibboGen::destroyTree() {
 }
 
 void FibboGen::populateAllPointers(TreeNode* node) {
-    if (node->getNumChildren() == 0) {
-        allPointers.insert(node);
-    } else {
-        vector<TreeNode*>::iterator it = node->getChildrenBegin();
-        for (; it != node->getChildrenEnd(); it++) {
-            populateAllPointers(*it);
-            allPointers.insert(*it);
+    unordered_map<int, TreeNode*>::iterator it;
+    for (int i = 0; i < size - 1; i++) {
+        it = boardNodes[i]->begin();
+        for (; it != boardNodes[i]->end(); it++) {
+            allPointers.insert(it->second);
         }
     }
 }
@@ -226,6 +232,10 @@ int FibboGen::getStart() {
     return start;
 }
 
+int FibboGen::getSize() {
+    return size;
+}
+
 //! Set private member start
 /*! 
  * Sets the starting position of the puzzle; i.e. the 
@@ -276,6 +286,14 @@ TreeNode* FibboGen::getParentNode() {
     return parentNode;
 }
 
+int FibboGen::getNodeCountAtLayer(int level) {
+    if (level >= 0 && level < boardNodes.size()) {
+        return boardNodes[level]->size();
+    } else {
+        return -1;
+    }
+}
+
 void FibboGen::generateSolutionTree() {
     setStart(-1);
     destroyTree();
@@ -290,6 +308,7 @@ void FibboGen::generateSolutionTree() {
         parentNode->addChild(newNode);
         boardNodes[0]->insert({encodeCurrentBoard(), newNode});
     }
+    cout << "Added children to head" << endl;
 
     for (int i = 1; i < size - 1; i++) {
         unordered_map<int, TreeNode*>* boards = boardNodes[i - 1];
@@ -299,10 +318,16 @@ void FibboGen::generateSolutionTree() {
             setBoard(it->first);
             backtrack(parentNode->getStep() + 1);
         }
+        cout << "Step " << i << " complete" << endl;
     }
 
     parentNode = head;
+    cout << "Begin prune" << endl;
+    timer t;
+    t.start();
     prune();
+    t.stop();
+    cout << "Prune complete in " << t << " milliseconds" << endl;
 }
 
 TreeNode* FibboGen::getNodeByData(TreeNode* node, int data) {
@@ -428,7 +453,7 @@ void FibboGen::prune() {
 }
 
 void FibboGen::pruneHelper(TreeNode* node, unordered_set<TreeNode*>* stagedForDelete) {
-    if (node->getStep() == 14) {
+    if (node->getStep() == size - 1) {
         return;
     } else if (node->getNumChildren() == 0) {
         TreeNode* parent = path.back();
@@ -462,6 +487,9 @@ void FibboGen::removeNullChildren(TreeNode* node) {
 void FibboGen::deleteDeadNodes(unordered_set<TreeNode*>* stagedForDelete) {
     unordered_set<TreeNode*>::iterator it = stagedForDelete->begin();
     for (; it != stagedForDelete->end(); it++) {
+        for (int i = 0; i < size -1; i++) {
+            boardNodes[i]->erase((*it)->getData());
+        }
         delete *it;
     }
 }
@@ -577,13 +605,17 @@ void test() {
     FibboGen gen(5);
     int paths = 0;
     int bottomNodes = 0;
+    int nodes = 0;
 
     int expectedNumPaths = (29760 * 3) + (85258 * 3) + (1550 * 3) + (14880 * 6);
     int expectedBottomNodes = 15;
+    int expectedNumNodes = 5053;
 
     gen.generateSolutionTree();
     paths = countPathsToBottom(gen.getParentNode());
     bottomNodes = countNodesOnBottom(gen.getParentNode());
+    unordered_set<TreeNode*>& allNodes = gen.getAllNodes();
+    nodes = allNodes.size();
     if (paths == expectedNumPaths) {
         cout << "PASS Correct Number of Paths" << endl;
     } else {
@@ -594,6 +626,13 @@ void test() {
     } else {
         cout << "FAIL Yielded " << bottomNodes << " bottom nodes, expected " << expectedBottomNodes << endl;
     }
+    if (nodes == expectedNumNodes) {
+        cout << "PASS Correct Number of Nodes" << endl;
+    } else {
+        cout << "FAIL Yielded " << nodes << " nodes, expected " << expectedNumNodes << endl;
+    }
+
+    delete &allNodes;
 }
 
 void generate() {
@@ -615,13 +654,19 @@ void generate() {
 }
 
 int main(int argc, char** argv) {
-    // generate();
-    FibboGen gen(5);
+    FibboGen gen(stoi(argv[1]));
     gen.generateSolutionTree();
+
+    // cout << endl;
+    // for (int i = 0; i < gen.getSize() - 1; i++) {
+    //     cout << "Layer " << i << " has " << gen.getNodeCountAtLayer(i) << " nodes" << endl;
+    // }
+
     unordered_set<TreeNode*>& allNodes = gen.getAllNodes();
+    cout << "All nodes count: " << allNodes.size() << endl;
     
     ofstream file;
-    file.open("peg_solns.ts");
+    file.open("peg_solns_6.ts");
 
     unordered_set<TreeNode*>::iterator it = allNodes.begin();
     file << "export class PegData {\n\tstatic readonly DATA = new Map([\n";

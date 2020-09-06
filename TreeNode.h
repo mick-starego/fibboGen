@@ -13,12 +13,8 @@ class TreeNode {
 
         int getData();
         int getStep();
-
+        
         void addChild(TreeNode* child);
-        
-        TreeNode* getParent();
-        void setParent(TreeNode*);
-        
         TreeNode* getChildByIndex(int index);
         TreeNode* getChildByData(int data);
         vector<TreeNode*>& getAllChildren();
@@ -28,13 +24,18 @@ class TreeNode {
         void deleteChild(TreeNode* node);
         void removeNullChildren();
 
+        void addParent(TreeNode* parent);
+        TreeNode* getParentByIndex(int index);
+        vector<TreeNode*>::iterator getParentsBegin();
+        vector<TreeNode*>::iterator getParentsEnd();
+
         bool ignore();
 
     private:
         int data;
         vector<TreeNode*> children;
+        vector<TreeNode*> parents;
         int step;
-        TreeNode* parent;
         bool isIgnore;
 };
 

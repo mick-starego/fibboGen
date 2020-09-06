@@ -6,7 +6,6 @@ using namespace std;
 TreeNode::TreeNode(int data, int step) {
     this->data = data;
     this->step = step;
-    this->parent = NULL;
     this->isIgnore = false;
 }
 
@@ -44,12 +43,8 @@ void TreeNode::addChild(TreeNode* child) {
     children.push_back(child);
 }
 
-TreeNode* TreeNode::getParent() {
-    return parent;
-}
-
-void TreeNode::setParent(TreeNode* parent) {
-    this->parent = parent;
+void TreeNode::addParent(TreeNode* parent) {
+    parents.push_back(parent);
 }
 
 TreeNode* TreeNode::getChildByData(int data) {
@@ -66,6 +61,10 @@ TreeNode* TreeNode::getChildByIndex(int index) {
     return ( index >= 0 && index < children.size() ) ? children[index] : NULL;
 }
 
+TreeNode* TreeNode::getParentByIndex(int index) {
+    return ( index >= 0 && index < parents.size() ) ? parents[index] : NULL;
+}
+
 vector<TreeNode*>& TreeNode::getAllChildren() {
     return children;
 }
@@ -76,6 +75,14 @@ vector<TreeNode*>::iterator TreeNode::getChildrenBegin() {
 
 vector<TreeNode*>::iterator TreeNode::getChildrenEnd() {
     return children.end();
+}
+
+vector<TreeNode*>::iterator TreeNode::getParentsBegin() {
+    return parents.begin();
+}
+
+vector<TreeNode*>::iterator TreeNode::getParentsEnd() {
+    return parents.end();
 }
 
 //! NOTE: Very, very dangerous. Does not delete node in

@@ -19,10 +19,12 @@ class FibboGen {
         void setStart(int start);
         int getTarget();
         void setTarget(int target);
+        int getSize();
         int getStep();
         int getNodeCount();
         TreeNode* getParentNode();
         unordered_set<TreeNode*>& getAllNodes();
+        int getNodeCountAtLayer(int level);
 
         void clear();
         bool isSolved();
@@ -48,6 +50,7 @@ class FibboGen {
         int solutions;
         bool solved;
         int step;
+        int count; // remove!
         TreeNode* parentNode;
         TreeNode* head;
         unordered_set<TreeNode*> allPointers;

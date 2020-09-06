@@ -1,7 +1,7 @@
 CXX = clang++ $(CXXFLAGS)
 CXXFLAGS = -g -Wall -O2 -fsanitize=leak,address
 
-OBJECTS = FibboGen.o TreeNode.o
+OBJECTS = FibboGen.o TreeNode.o timer.o
 
 fibboGen: $(OBJECTS)
 	$(CXX) $(OBJECTS) -o FibboGen
@@ -13,4 +13,6 @@ clean:
 FibboGen.o: FibboGen.cpp
 
 TreeNode.o: TreeNode.cpp
+
+timer.o: timer.cpp
 
