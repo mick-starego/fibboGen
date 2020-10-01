@@ -74,6 +74,7 @@ class FibboGen {
         int encodeCurrentBoard();
         void pruneHelper(TreeNode* node, unordered_set<TreeNode*>* stagedForDelete);
         vector<TreeNode*>* getParents(unordered_map<int, TreeNode*>* candidates, TreeNode* node);
+        vector<TreeNode*>* getChildren(unordered_map<int, TreeNode*>* candidates, TreeNode* node);
         void removeNullChildren(TreeNode* node);
         void deleteDeadNodes(unordered_set<TreeNode*>* stagedForDelete);
         void markNodesToKeep();

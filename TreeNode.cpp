@@ -30,46 +30,6 @@ int TreeNode::getStep() {
     return step;
 }
 
-int TreeNode::getNumChildren() {
-    int num = 0;
-    for (int i = 0; i < children.size(); i++) {
-        if (children[i] != NULL) {
-            num++;
-        }
-    }
-    return num;
-}
-
-void TreeNode::addChild(TreeNode* child) {
-    children.push_back(child);
-}
-
-TreeNode* TreeNode::getChildByData(int data) {
-    vector<TreeNode*>::iterator it = children.begin();
-    for (; it != children.end(); it++) {
-        if ((*it)->getData() == data) {
-            return *it;
-        }
-    }
-    return NULL;
-}
-
-TreeNode* TreeNode::getChildByIndex(int index) {
-    return ( index >= 0 && index < children.size() ) ? children[index] : NULL;
-}
-
-vector<TreeNode*>& TreeNode::getAllChildren() {
-    return children;
-}
-
-vector<TreeNode*>::iterator TreeNode::getChildrenBegin() {
-    return children.begin();
-}
-
-vector<TreeNode*>::iterator TreeNode::getChildrenEnd() {
-    return children.end();
-}
-
 void TreeNode::markToKeep() {
     isMarked = true;
 }
@@ -80,29 +40,6 @@ void TreeNode::unMarkToKeep() {
 
 bool TreeNode::isMarkedToKeep() {
     return isMarked;
-}
-
-//! NOTE: Very, very dangerous. Does not delete node in
-// question, just removes pointer. You better know what
-// you're doing...
-void TreeNode::deleteChild(TreeNode* node) {
-    // for (int i = 0; i < children.size(); i++) {
-    //     if (children[i] == node) {
-    //         children[i] = NULL;
-    //     }
-    // }
-    children.erase(remove(children.begin(), children.end(), node), children.end());
-}
-
-void TreeNode::removeNullChildren() {
-    vector<TreeNode*> newVec;
-    for (int i = 0; i < children.size(); i++) {
-        if (children[i] != NULL) {
-            newVec.push_back(children[i]);
-        }
-    }
-    children.clear();
-    children.insert(children.end(), newVec.begin(), newVec.end());
 }
 
 // int main() {
