@@ -8,7 +8,7 @@ fibboGen: $(OBJECTS)
 
 .PHONY: clean
 clean:
-	-rm -f  *.o *~ FibboGen
+	-rm -f  *.o *~ FibboGen *.ts
 
 FibboGen.o: FibboGen.cpp
 

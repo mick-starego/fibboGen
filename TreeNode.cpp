@@ -7,6 +7,7 @@ TreeNode::TreeNode(int data, int step) {
     this->data = data;
     this->step = step;
     this->isIgnore = false;
+    this->isMarked = false;
 }
 
 TreeNode::~TreeNode() {
@@ -43,10 +44,6 @@ void TreeNode::addChild(TreeNode* child) {
     children.push_back(child);
 }
 
-void TreeNode::addParent(TreeNode* parent) {
-    parents.push_back(parent);
-}
-
 TreeNode* TreeNode::getChildByData(int data) {
     vector<TreeNode*>::iterator it = children.begin();
     for (; it != children.end(); it++) {
@@ -61,10 +58,6 @@ TreeNode* TreeNode::getChildByIndex(int index) {
     return ( index >= 0 && index < children.size() ) ? children[index] : NULL;
 }
 
-TreeNode* TreeNode::getParentByIndex(int index) {
-    return ( index >= 0 && index < parents.size() ) ? parents[index] : NULL;
-}
-
 vector<TreeNode*>& TreeNode::getAllChildren() {
     return children;
 }
@@ -77,23 +70,28 @@ vector<TreeNode*>::iterator TreeNode::getChildrenEnd() {
     return children.end();
 }
 
-vector<TreeNode*>::iterator TreeNode::getParentsBegin() {
-    return parents.begin();
+void TreeNode::markToKeep() {
+    isMarked = true;
 }
 
-vector<TreeNode*>::iterator TreeNode::getParentsEnd() {
-    return parents.end();
+void TreeNode::unMarkToKeep() {
+    isMarked = false;
+}
+
+bool TreeNode::isMarkedToKeep() {
+    return isMarked;
 }
 
 //! NOTE: Very, very dangerous. Does not delete node in
 // question, just removes pointer. You better know what
 // you're doing...
 void TreeNode::deleteChild(TreeNode* node) {
-    for (int i = 0; i < children.size(); i++) {
-        if (children[i] == node) {
-            children[i] = NULL;
-        }
-    }
+    // for (int i = 0; i < children.size(); i++) {
+    //     if (children[i] == node) {
+    //         children[i] = NULL;
+    //     }
+    // }
+    children.erase(remove(children.begin(), children.end(), node), children.end());
 }
 
 void TreeNode::removeNullChildren() {

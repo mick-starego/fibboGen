@@ -14,6 +14,8 @@ class FibboGen {
     public:
         FibboGen(int order);
         ~FibboGen();
+
+        void generate(int mode);
         
         int getStart();
         void setStart(int start);
@@ -30,6 +32,7 @@ class FibboGen {
         bool isSolved();
         void generateSolutionTree();
         void prune();
+        void getParentsTest();
 
         void printMoves();
         void printBoardStateCounts();
@@ -70,8 +73,10 @@ class FibboGen {
         string boardString(int position);
         int encodeCurrentBoard();
         void pruneHelper(TreeNode* node, unordered_set<TreeNode*>* stagedForDelete);
+        vector<TreeNode*>* getParents(unordered_map<int, TreeNode*>* candidates, TreeNode* node);
         void removeNullChildren(TreeNode* node);
         void deleteDeadNodes(unordered_set<TreeNode*>* stagedForDelete);
+        void markNodesToKeep();
 
         void populateAllPointers(TreeNode* node);
         void destroyTree();

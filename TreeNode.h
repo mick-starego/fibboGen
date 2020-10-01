@@ -24,19 +24,17 @@ class TreeNode {
         void deleteChild(TreeNode* node);
         void removeNullChildren();
 
-        void addParent(TreeNode* parent);
-        TreeNode* getParentByIndex(int index);
-        vector<TreeNode*>::iterator getParentsBegin();
-        vector<TreeNode*>::iterator getParentsEnd();
-
         bool ignore();
+        void markToKeep();
+        void unMarkToKeep();
+        bool isMarkedToKeep();
 
     private:
         int data;
         vector<TreeNode*> children;
-        vector<TreeNode*> parents;
         int step;
         bool isIgnore;
+        bool isMarked;
 };
 
 #endif
