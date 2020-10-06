@@ -54,13 +54,14 @@ class FibboGen {
         int solutions;
         bool solved;
         int step;
+        int parentCount; // remove!
         int count; // remove!
         TreeNode* parentNode;
         TreeNode* head;
         unordered_set<TreeNode*> allPointers;
 
         vector<string> moves;
-        vector< unordered_map<int, TreeNode*>* > boardNodes;
+        vector< unordered_set<int>* > boardNodes;
         vector<TreeNode*> path;
 
         void setDirections();
