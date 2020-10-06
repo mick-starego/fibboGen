@@ -30,6 +30,42 @@ int TreeNode::getStep() {
     return step;
 }
 
+int TreeNode::getNumParents() {
+    int num = 0;
+    for (int i = 0; i < parents.size(); i++) {
+        if (parents[i] != NULL) {
+            num++;
+        }
+    }
+    return num;
+}
+
+void TreeNode::addParent(TreeNode* child) {
+    parents.push_back(child);
+}
+
+TreeNode* TreeNode::getParentByData(int data) {
+    vector<TreeNode*>::iterator it = parents.begin();
+    for (; it != parents.end(); it++) {
+        if ((*it)->getData() == data) {
+            return *it;
+        }
+    }
+    return NULL;
+}
+
+TreeNode* TreeNode::getParentByIndex(int index) {
+    return ( index >= 0 && index < parents.size() ) ? parents[index] : NULL;
+}
+
+vector<TreeNode*>::iterator TreeNode::getParentsBegin() {
+    return parents.begin();
+}
+
+vector<TreeNode*>::iterator TreeNode::getParentsEnd() {
+    return parents.end();
+}
+
 void TreeNode::markToKeep() {
     isMarked = true;
 }

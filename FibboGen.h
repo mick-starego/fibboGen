@@ -16,6 +16,7 @@ class FibboGen {
         ~FibboGen();
 
         void generate(int mode);
+        void readTreeAndGetRandSoln(int order);
         
         int getStart();
         void setStart(int start);
@@ -81,6 +82,8 @@ class FibboGen {
 
         void populateAllPointers(TreeNode* node);
         void destroyTree();
+
+        void writeBinaryFile();
 
 };
 

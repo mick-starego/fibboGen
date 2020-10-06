@@ -13,6 +13,13 @@ class TreeNode {
 
         int getData();
         int getStep();
+        
+        void addParent(TreeNode* child);
+        TreeNode* getParentByIndex(int index);
+        TreeNode* getParentByData(int data);
+        vector<TreeNode*>::iterator getParentsBegin();
+        vector<TreeNode*>::iterator getParentsEnd();
+        int getNumParents();
 
         bool ignore();
         void markToKeep();
@@ -21,6 +28,7 @@ class TreeNode {
 
     private:
         int data;
+        vector<TreeNode*> parents;
         int step;
         bool isIgnore;
         bool isMarked;
