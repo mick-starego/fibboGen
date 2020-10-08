@@ -15,31 +15,6 @@ class FibboGen {
         FibboGen(int order);
         ~FibboGen();
 
-        void generate(int mode);
-        void readTreeAndGetRandSoln(int order);
-        
-        int getStart();
-        void setStart(int start);
-        int getTarget();
-        void setTarget(int target);
-        int getSize();
-        int getStep();
-        int getNodeCount();
-        TreeNode* getParentNode();
-        unordered_set<TreeNode*>& getAllNodes();
-        int getNodeCountAtLayer(int level);
-
-        void clear();
-        bool isSolved();
-        void generateSolutionTree();
-        void prune();
-        void getParentsTest();
-
-        void printMoves();
-        void printBoardStateCounts();
-        TreeNode* getNodeByData(TreeNode* node, int data);
-        string constructBoardString(int enc);
-
     private:
         bool* board;
 
@@ -51,42 +26,13 @@ class FibboGen {
         int size;
         int start;
         int target;
-        int solutions;
-        bool solved;
-        int step;
-        int parentCount; // remove!
-        int count; // remove!
-        TreeNode* parentNode;
-        TreeNode* head;
-        unordered_set<TreeNode*> allPointers;
-
-        vector<string> moves;
         vector< unordered_set<int>* > boardNodes;
-        vector< vector<int>* > boardNodeVecs; 
-        vector<TreeNode*> path;
 
         void setDirections();
         int calculateSize(int order) const;
-        void resetBoard();
         void setBoard(int enc);
-
-        void backtrack(int step);
-        int findPos(bool* ptr);
-        bool checkSolved();
-        string boardString(int position);
         int encodeCurrentBoard();
-        void pruneHelper(TreeNode* node, unordered_set<TreeNode*>* stagedForDelete);
-        vector<int>* getParents(unordered_set<int>* candidates, int node);
-        vector<TreeNode*>* getChildren(unordered_map<int, TreeNode*>* candidates, TreeNode* node);
-        void copyIntoBuffer(vector<int>* nodes, vector<int>* buffer);
-        void removeNullChildren(TreeNode* node);
-        void deleteDeadNodes(unordered_set<TreeNode*>* stagedForDelete);
-        void markNodesToKeep();
-
-        void populateAllPointers(TreeNode* node);
-        void destroyTree();
-
-        void writeBinaryFile();
+        vector<int>* getChildren(unordered_set<int>* candidates, int node);
 
 };
 
