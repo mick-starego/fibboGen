@@ -62,6 +62,7 @@ class FibboGen {
 
         vector<string> moves;
         vector< unordered_set<int>* > boardNodes;
+        vector< vector<int>* > boardNodeVecs; 
         vector<TreeNode*> path;
 
         void setDirections();
@@ -75,8 +76,9 @@ class FibboGen {
         string boardString(int position);
         int encodeCurrentBoard();
         void pruneHelper(TreeNode* node, unordered_set<TreeNode*>* stagedForDelete);
-        vector<TreeNode*>* getParents(unordered_map<int, TreeNode*>* candidates, TreeNode* node);
+        vector<int>* getParents(unordered_set<int>* candidates, int node);
         vector<TreeNode*>* getChildren(unordered_map<int, TreeNode*>* candidates, TreeNode* node);
+        void copyIntoBuffer(vector<int>* nodes, vector<int>* buffer);
         void removeNullChildren(TreeNode* node);
         void deleteDeadNodes(unordered_set<TreeNode*>* stagedForDelete);
         void markNodesToKeep();

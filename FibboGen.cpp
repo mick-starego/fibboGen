@@ -273,10 +273,25 @@ void FibboGen::generateSolutionTree() {
         cout << "Step " << i << " complete" << endl;
     }
 
+    // Populate boardNodeVecs and delete boardNodes
+    cout << "Populating boardNodeVecs" << endl;
+    for (int i = 0; i < size - 1; i++) {
+        vector<int>* nodeVec = new vector<int>();
+
+        unordered_set<int>::iterator it = boardNodes[i]->begin();
+        for (; it != boardNodes[i]->end(); it++) {
+            nodeVec->push_back(*it);
+        }
+
+        boardNodeVecs.push_back(nodeVec);
+        delete boardNodes[i];
+        boardNodes[i] = NULL;
+    }
+
     cout << "Begin prune" << endl;
     timer t;
     t.start();
-    // prune();
+    prune();
     t.stop();
     cout << "Prune complete in " << t << " milliseconds" << endl;
 }
@@ -329,67 +344,114 @@ int FibboGen::encodeCurrentBoard() {
         enc *= 2;
         if (board[i] == 1) enc++;
     }
-    return enc * 2;
+    return enc;
 }
 
 void FibboGen::prune() {
 
-    // markNodesToKeep();
-    // cout << "Pruning" << endl;
+    vector<int> buffer;
 
-    for (int i = 0; i < boardNodes.size(); i++) {
+    // Multiply the val of every node by 2
+    for (int i = 0; i < boardNodeVecs.size(); i++) {
 
-        vector<TreeNode*> stagedForErasure;
-
-        unordered_map<int, TreeNode*>::iterator it = boardNodes[i]->begin();
-        for (; it != boardNodes[i]->end(); it++) {
-            if (!(it->second->isMarkedToKeep())) {
-                stagedForErasure.push_back(it->second);
-            }
+        cout << "Size before: " << boardNodes[i]->size() << endl;
+        for (int j = 0; j < boardNodeVecs[i].size(); j++) {
+            boardNodeVecs[i][j] <<= 1;
         }
-
-        vector<TreeNode*>::iterator eraseIt = stagedForErasure.begin();
-        for (; eraseIt != stagedForErasure.end(); eraseIt++) {
-            setBoard((*eraseIt)->getData());
-            boardNodes[i]->erase(encodeCurrentBoard());
-            delete *eraseIt;
-        }
+        cout << "Size after: " << boardNodes[i]->size() << endl;
     }
+
+    markNodesToKeep();
 }
 
 void FibboGen::markNodesToKeep() {
-    unordered_set<int> buffer;
 
-    copyIntoBuffer(boardNodes[boardNodes.size() - 1], &buffer);
+    for (int i = 0; i < boardNodeVecs[boardNodeVecs.size() - 1].size(); i++) {
 
-    unordered_set<int>::iterator it = buffer.begin();
-    for (; it != buffer.end(); it++) {
-        boardNodes[boardNodes.size() - 1]->delete(*it);
-        boardNodes[boardNodes.size() - 1]->insert((*it)++);
+        vector<int>* parents = getParents(boardNodeVecs[boardNodeVecs.size() - 1][i]);
+        vector<int>::iterator parentsIt = parents->begin();
+        for (; parentsIt != parents->end(); parentsIt++) {
+            (*parentsIt)++;
+        }
+
+        boardNodeVecs[boardNodeVecs.size() - 1][i] /= 2;
     }
 
-    for (int i = boardNodes.size() - 1; i > 0; i--) {
-        cout << "Marking layer " << i << endl;
-        it = boardNodes[i]->begin();
+    for (int i = boardNodeVecs.size() - 2; i > 0; i--) {
 
-        for (; it != boardNodes[i]->end(); it++) {
+        vector<int> replacement = new vector<int>();
+
+        vector<int>::iterator it = boardNodeVecs[i]->begin();
+        for (; it != boardNodeVecs[i]->end(); it++) {
             if (*it % 2 == 1) {
-                vector<TreeNode*>::iterator parentsIt = it->second->getParentsBegin();
+                vector<int>* parents = getParents(*it);
+                vector<int>::iterator parentsIt = parents->begin();
 
-                for (; parentsIt != it->second->getParentsEnd(); parentsIt++) {
-                    (*parentsIt)->markToKeep();
+                for (; parentsIt != parents->end(); parentsIt++) {
+                    boardNodes[i - 1]->erase(*parentsIt);
+                    boardNodes[i - 1]->insert( (*parentsIt) + 1 );
                 }
+
+                replacement.push_back((*it) / 2);
             }
-        }
+        }   
     }
 }
 
-void copyIntoBuffer(unordered_set<int>* nodes, unorderd_set<int>* buffer) {
+void FibboGen::copyIntoBuffer(vector<int>* nodes, vector<int>* buffer) {
     buffer->clear();
     unordered_set<int>::iterator it = nodes->begin();
     for (; it != nodes->end(); it++) {
-        buffer->insert(*it);
+        buffer->push_back(*it);
     }
+}
+
+vector<int>* FibboGen::getParents(vector<int>* candidates, int node) {
+    int currentBoard = encodeCurrentBoard();
+    vector<int>* result = new vector<int>();
+    setBoard(node);
+
+    bool* (*dir) = NULL;
+
+    for (int d = 0; d < 3; d++) {
+
+        if (d == 0) {
+            dir = dirOne;
+        } else if (d == 1) {
+            dir = dirTwo;
+        } else {
+            dir = dirThree;
+        }
+        
+        for (int i = 0; i < (size - 2); i++) {
+            if (dir[i] == NULL || dir[i+1] == NULL || dir[i+2] == NULL) continue;
+
+            if (*(dir[i]) == 0 && *(dir[i+1]) == 0 && *(dir[i+2]) == 1) {
+                *(dir[i]) = 1;
+                *(dir[i+1]) = 1;
+                *(dir[i+2]) = 0;
+
+                result->push_back(encodeCurrentBoard());
+            
+                *(dir[i]) = 0;
+                *(dir[i+1]) = 0;
+                *(dir[i+2]) = 1;
+                
+            } else if (*(dir[i]) == 1 && *(dir[i+1]) == 0 && *(dir[i+2]) == 0) {
+                *(dir[i]) = 0;
+                *(dir[i+1]) = 1;
+                *(dir[i+2]) = 1;
+                
+                result->push_back(encodeCurrentBoard());
+                
+                *(dir[i]) = 1;
+                *(dir[i+1]) = 0;
+                *(dir[i+2]) = 0;
+            }
+        }
+    }
+    setBoard(currentBoard);
+    return result;
 }
 
 string FibboGen::boardString(int position) {
@@ -497,16 +559,6 @@ void FibboGen::generate(int format) {
     generateSolutionTree();
 
     int nodeCount = 0;
-    cout << endl;
-    for (int i = 0; i < getSize() - 1; i++) {
-        cout << "Layer " << i << " has " << getNodeCountAtLayer(i) << " nodes" << endl;
-        nodeCount += getNodeCountAtLayer(i);
-    }
-    cout << "Total num nodes: " << nodeCount << endl;
-
-    prune();
-
-    nodeCount = 0;
     cout << endl;
     for (int i = 0; i < getSize() - 1; i++) {
         cout << "Layer " << i << " has " << getNodeCountAtLayer(i) << " nodes" << endl;
