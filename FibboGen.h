@@ -15,6 +15,14 @@ class FibboGen {
         FibboGen(int order);
         ~FibboGen();
 
+        int getSize();
+        void setStart(int pos);
+        void stepDown(float load, int* matrix);
+        void takeFirstStep(float load, int* matrix);
+        unordered_set<__int128>* getBottomLayer();
+        unordered_set<__int128>* getNextLayer();
+        int* getBottomLayerMatrix(int numOnes);
+
     private:
         bool* board;
 
@@ -26,13 +34,16 @@ class FibboGen {
         int size;
         int start;
         int target;
-        vector< unordered_set<int>* > boardNodes;
+        vector< unordered_set<__int128>* > boardNodes;
+
 
         void setDirections();
         int calculateSize(int order) const;
-        void setBoard(int enc);
-        int encodeCurrentBoard();
-        vector<int>* getChildren(unordered_set<int>* candidates, int node);
+        void setBoard(__int128 enc);
+        __int128 encodeCurrentBoard();
+        int getNodeCountAtLayer(int level);
+        int getScore(__int128 enc, int* matrix);
+        unordered_set<__int128>* getChildren(__int128 node);
 
 };
 
