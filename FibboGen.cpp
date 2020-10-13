@@ -17,10 +17,13 @@
 #include "FibboGen.h"
 #include "TreeNode.h"
 #include "timer.h"
+#include "Hypers.h"
 
 using namespace std;
 
-float getRand();
+float getRand() {
+    return rand() / (float) RAND_MAX;
+}
 
 FibboGen::FibboGen(int order) {
 
@@ -118,10 +121,10 @@ void FibboGen::setDirections() {
         colsLeft--;
     }
 
-    for (int i = 0; i < size; i++){
-        cout << board[i] << " ";
-    }
-    cout << endl;
+    // for (int i = 0; i < size; i++){
+    //     cout << board[i] << " ";
+    // }
+    // cout << endl;
 
 }
 
@@ -141,6 +144,10 @@ void FibboGen::setStart(int pos) {
             board[i] = 1;
         }
     }
+}
+
+__int128 FibboGen::getEncodedBoard() {
+    return encodeCurrentBoard();
 }
 
 void FibboGen::setBoard(__int128 enc) {
@@ -165,6 +172,54 @@ __int128 FibboGen::encodeCurrentBoard() {
         if (board[i] == 1) enc++;
     }
     return enc;
+}
+
+unordered_set<__int128>* FibboGen::getParents(__int128 node) {
+    __int128 currentBoard = encodeCurrentBoard();
+    unordered_set<__int128>* result = new unordered_set<__int128>();
+    setBoard(node);
+
+    bool* (*dir) = NULL;
+
+    for (int d = 0; d < 3; d++) {
+
+        if (d == 0) {
+            dir = dirOne;
+        } else if (d == 1) {
+            dir = dirTwo;
+        } else {
+            dir = dirThree;
+        }
+        
+        for (int i = 0; i < (size - 2); i++) {
+            if (dir[i] == NULL || dir[i+1] == NULL || dir[i+2] == NULL) continue;
+
+            if (*(dir[i]) == 0 && *(dir[i+1]) == 0 && *(dir[i+2]) == 1) {
+                *(dir[i]) = 1;
+                *(dir[i+1]) = 1;
+                *(dir[i+2]) = 0;
+                
+                result->insert(encodeCurrentBoard());
+
+                *(dir[i]) = 0;
+                *(dir[i+1]) = 0;
+                *(dir[i+2]) = 1;
+                
+            } else if (*(dir[i]) == 1 && *(dir[i+1]) == 0 && *(dir[i+2]) == 0) {
+                *(dir[i]) = 0;
+                *(dir[i+1]) = 1;
+                *(dir[i+2]) = 1;
+                
+                result->insert(encodeCurrentBoard());
+                
+                *(dir[i]) = 1;
+                *(dir[i+1]) = 0;
+                *(dir[i+2]) = 0;
+            }
+        }
+    }
+    setBoard(currentBoard);
+    return result;
 }
 
 unordered_set<__int128>* FibboGen::getChildren(__int128 node) {
@@ -356,6 +411,153 @@ int* FibboGen::getBottomLayerMatrix(int numOnes) {
     return matrix;
 }
 
+// Will segfault if boardNodes is not populated
+vector<__int128>* FibboGen::getFirstHalfOfSoln(__int128 enc) {
+    int bottom = 0;
+    for (int i = size - 2; i >= 0; i--) {
+        if (boardNodes[i]->size() > 0) {
+            bottom = i;
+            break;
+        }
+    }
+
+    if (boardNodes[bottom]->find(enc) == boardNodes[bottom]->end()) {
+        cout << "This board is not valid" << endl;
+        return NULL;
+    }
+
+    vector<__int128>* solnVec = new vector<__int128>();
+    solnVec->push_back(enc);
+    __int128 previous = enc;
+    unordered_set<__int128>::iterator it;
+
+    for (int i = bottom; i > 0; i--) {
+        unordered_set<__int128>* parents = getParents(previous);
+        unordered_set<__int128> invalidParents;
+
+        for (it = parents->begin(); it != parents->end(); it++) {
+            if (boardNodes[i - 1]->find(*it) == boardNodes[i - 1]->end()) {
+                invalidParents.insert(*it);
+            }
+        }
+
+        for (it = invalidParents.begin(); it != invalidParents.end(); it++) {
+            parents->erase(*it);
+        }
+
+        int index = getRand() * parents->size();
+        int numSkipped = 0;
+        for (it = parents->begin(); it != parents->end(); it++) {
+            if (numSkipped == index) {
+                solnVec->push_back(*it);
+                previous = *it;
+            }
+            numSkipped++;
+        }
+
+        delete parents;
+    }
+
+    return solnVec;
+}
+
+string FibboGen::getBoardString(__int128 current, __int128 next) {
+    __int128 hold = encodeCurrentBoard();
+
+    if (next == -1) {
+        setBoard(current);
+        vector<string>* blank = constructBoardString(-1, -1, -1, 0);
+
+        string s = "\n";
+        for (int i = 0; i < blank->size(); i++) {
+            s += (*blank)[i] + "\n\n\n";
+        }
+
+        setBoard(hold);
+        delete blank;
+        return s;
+    }
+
+    vector<int> changedPegs;
+    int target = -1;
+    
+    __int128 xorResult = current ^ next;
+    __int128 andResult = xorResult & next;
+    setBoard(andResult);
+    for (int i = 0; i < size; i++) {
+        if (board[i] == 1) {
+            target = i;
+        } 
+    }
+
+    setBoard(xorResult);
+    for (int i = 0; i < size; i++) {
+        if (board[i] == 1 && i != target) {
+            changedPegs.push_back(i);
+        } 
+    }
+
+    setBoard(next);
+    vector<string>* labeled = constructBoardString(target, changedPegs[0], changedPegs[1], 10);
+    vector<string>* blank = constructBoardString(-1, -1, -1, 0);
+
+    string s = "\n";
+    for (int i = 0; i < labeled->size(); i++) {
+        s += (*labeled)[i] + (*blank)[i] + "\n\n\n";
+    }
+
+    setBoard(hold);
+    delete labeled;
+    delete blank;
+    return s;
+}
+
+vector<string>* FibboGen::constructBoardString(int to, int from1, int from2, int rightPad) {
+    vector<string>* vec = new vector<string>();
+
+    string s = "";
+    int leftpad = 0;
+    int nextIndex = 0;
+    string space = " ";
+    string theChar;
+
+    for (int i = 0; i < order; i++) {
+        leftpad = (1 + 3 * ( order - 1 ) ) - i * 3;
+        leftpad--;
+
+        for (int j = 0; j < leftpad; j++) {
+            s += space;
+        }
+
+        for (int j = 0; j < i + 1; j++) {
+            if (nextIndex == to) {
+                theChar = "(+)";
+            } else if (nextIndex == from1 || nextIndex == from2) {
+                theChar = "(-)";
+            } else if (board[nextIndex]) {
+                theChar = "(X)";
+            } else {
+                theChar = "( )";
+            }
+
+            if (j != i) {
+                s += theChar + "   ";
+            } else {
+                s += theChar;
+                if (rightPad > 0) {
+                    for (int j = 0; j < leftpad + rightPad; j++) {
+                        s += space;
+                    }
+                }
+                vec->push_back(s);
+                s = "";
+            }
+            nextIndex++;
+        }
+    }
+    return vec;
+}
+
 int getStepsA(int size){
     return size - floor((float) size / 2) - 1;
 }
@@ -364,7 +566,7 @@ int getStepsB(int size) {
     return size - ceil((float) size / 2) - 1;
 }
 
-__int128 reverse(__int128 a, __int128 size) {
+__int128 reverse(__int128 a, int size) {
     __int128 b = 0;
     for (int i = 0; i < size; i++) {
         b *= 2;
@@ -374,7 +576,7 @@ __int128 reverse(__int128 a, __int128 size) {
     return b;
 }
 
-__int128 getComplement(__int128 a, __int128 size) {
+__int128 getComplement(__int128 a, int size) {
     __int128 b = 0;
     for (int i = 0; i < size; i++) {
         b *= 2;
@@ -386,20 +588,27 @@ __int128 getComplement(__int128 a, __int128 size) {
     return reverse(b, size);
 }
 
-bool doesComplementExist(unordered_set<__int128>* a, unordered_set<__int128>* b, int size) {
-    cout << "Searching for complements... " << a->size() << " " << b->size() << endl;
+__int128 getComplementIfExists(unordered_set<__int128>* a, unordered_set<__int128>* b, int size, bool log) {
+    if (log) cout << "Searching for complements... " << a->size() << " " << b->size() << endl;
     unordered_set<__int128>::iterator itA = a->begin();
+
+    vector<__int128> solutionSet;
 
     for (; itA != a->end(); itA++) {
         if (b->find(getComplement(*itA, size)) != b->end()) {
-            cout << "FOUND!!!" << endl;
-            // cout << *itA << endl << getComplement(*itA, size) << endl;
+            solutionSet.push_back(*itA);
         }
     }
-    return false;
+    if (log) cout << "Solutions found: " << solutionSet.size() << endl;
+
+    if (solutionSet.size() > 0) {
+        return solutionSet[(int) ( getRand() * solutionSet.size() )];   
+    } else {
+        return (__int128) 0;
+    }
 }
 
-bool getSoln(int order, int start, int target, float load1, int boundary1, float load2, int boundary2, float load3) {
+bool getSoln(int order, int start, int target, Hypers* hypers, bool log) {
 
     FibboGen genA(order);
     FibboGen genB(order);
@@ -422,23 +631,25 @@ bool getSoln(int order, int start, int target, float load1, int boundary1, float
         numSteps++;
 
         if (numSteps <= stepsA) {
-            cout << endl << "Step A" << numSteps << endl;
             stepsATaken++;
 
-            cout << "Matrix: [";
-            for (int i = 0; i < size; i++) {
-                cout << " " << matrix[i];
+            if (log) {
+                cout << endl << "Step A" << numSteps << endl;
+                cout << "Matrix: [";
+                for (int i = 0; i < size; i++) {
+                    cout << " " << matrix[i];
+                }
+                cout << " ]" << endl;
             }
-            cout << " ]" << endl;
 
             if (numSteps == 1) {
-                genA.takeFirstStep(load1, matrix);
-            } else if (numSteps < boundary1) {
-                genA.stepDown(load1, matrix);
-            } else if (numSteps < boundary2) {
-                genA.stepDown(load2, matrix);
+                genA.takeFirstStep(hypers->getLoad1(), matrix);
+            } else if (numSteps < hypers->getBound1()) {
+                genA.stepDown(hypers->getLoad1(), matrix);
+            } else if (numSteps < hypers->getBound2()) {
+                genA.stepDown(hypers->getLoad2(), matrix);
             } else {
-                genA.stepDown(load3, matrix);
+                genA.stepDown(hypers->getLoad3(), matrix);
             }
 
             delete[] matrix;
@@ -446,23 +657,25 @@ bool getSoln(int order, int start, int target, float load1, int boundary1, float
         }
         
         if (numSteps <= stepsB) {
-            cout << endl << "Step B" << numSteps << endl;
             stepsBTaken++;
 
-            cout << "Matrix: [";
-            for (int i = 0; i < size; i++) {
-                cout << " " << matrix[i];
+            if (log) {
+                cout << endl << "Step B" << numSteps << endl;
+                cout << "Matrix: [";
+                for (int i = 0; i < size; i++) {
+                    cout << " " << matrix[i];
+                }
+                cout << " ]" << endl;
             }
-            cout << " ]" << endl;
 
             if (numSteps == 1) {
-                genB.takeFirstStep(load1, matrix);
-            } else if (numSteps < boundary1) {
-                genB.stepDown(load1, matrix);
-            } else if (numSteps < boundary2) {
-                genB.stepDown(load2, matrix);
+                genB.takeFirstStep(hypers->getLoad1(), matrix);
+            } else if (numSteps < hypers->getBound1()) {
+                genB.stepDown(hypers->getLoad1(), matrix);
+            } else if (numSteps < hypers->getBound2()) {
+                genB.stepDown(hypers->getLoad2(), matrix);
             } else {
-                genB.stepDown(load3, matrix);
+                genB.stepDown(hypers->getLoad3(), matrix);
             }
 
             delete[] matrix;
@@ -470,33 +683,147 @@ bool getSoln(int order, int start, int target, float load1, int boundary1, float
         }
     }
 
-    cout << endl << "Steps taken by A: " << stepsATaken << endl;
-    cout << "Steps taken by B: " << stepsBTaken << endl;
+    if (log) {
+        cout << endl << "Steps taken by A: " << stepsATaken << endl;
+        cout << "Steps taken by B: " << stepsBTaken << endl;
+    }
 
     delete[] matrix;
 
-    return doesComplementExist(genA.getBottomLayer(), genB.getBottomLayer(), size);
+    __int128 complement = getComplementIfExists(genA.getBottomLayer(), genB.getBottomLayer(), size, log);
+    if (complement == 0) return false;
+
+    vector<__int128>* halfA = genA.getFirstHalfOfSoln(complement);
+    vector<__int128>* halfB = genB.getFirstHalfOfSoln(getComplement(complement, size));
+
+    FibboGen gen(order);
+    // Push starting board position onto halfA
+    gen.setStart(start);
+    halfA->push_back(gen.getEncodedBoard());
+
+    // Push ending board onto halfB
+    gen.setStart(target);
+    halfB->push_back(gen.getEncodedBoard());
+
+    if ((*halfA)[0] != getComplement((*halfB)[0], size)) {
+        cout << "Halves do not intersect" << endl;
+    }
+
+    // Build solution vector
+    vector<__int128> solnVec;
+    for (int i = halfA->size() - 1; i >= 0; i--) {
+        solnVec.push_back((*halfA)[i]);
+    }
+    for (int i = 1; i < halfB->size(); i++) {
+        solnVec.push_back(getComplement((*halfB)[i], size));
+    }
+
+    if (solnVec.size() != size - 1) {
+        cout << "Solution vector is not the correct size" << endl;
+    }
+
+    // Print solution
+    cout << endl << endl;
+    cout << "START: Position " << start << " is empty" << endl;
+    cout << gen.getBoardString(solnVec[0], -1) << endl << endl;
+
+    for (int i = 0; i < solnVec.size() - 1; i++) {
+        cout << "MOVE " << i + 1 << endl;
+        cout << gen.getBoardString(solnVec[i], solnVec[i + 1]) << endl;
+        cout << endl;
+    }
+
+    cout << "SOLVED! Position " << target << " is filled" << endl;
+    cout << gen.getBoardString(solnVec[solnVec.size() - 1], -1) << endl;
+
+    delete halfA;
+    delete halfB;
+
+    return true;
 }
 
 int main(int argc, char** argv) {
     srand(time(NULL));
-    string load1;
-    string boundary1;
-    string load2;
-    string boundary2;
-    string load3;
+    vector<Hypers*> pegHypers = {
+        NULL, NULL, NULL, NULL, NULL,
+        new Hypers(2),
+        new Hypers(2),
+        NULL,
+        new Hypers(2, 4, 1.6),
+        new Hypers(2, 4, 1.6),
+        NULL,
+        new Hypers(1.9, 5, 1.5, 15, 1.4),
+        new Hypers(1.9, 5, 1.4, 20, 1.3),
+        NULL,
+        NULL,
+        NULL
+    };
 
-    cout << "Load 1: ";
-    cin >> load1;
-    cout << "Boundary 1: ";
-    cin >> boundary1;
-    cout << "Load 2: ";
-    cin >> load2;
-    cout << "Boundary 2: ";
-    cin >> boundary2;
-    cout << "Load 2: ";
-    cin >> load3;
+    int order = stoi(argv[1]);
+    if (order < 5 || order > 15) {
+        cout << "Order " << order << " is invalid" << endl;
+        return 1;
+    }
 
-    getSoln(stoi(argv[1]), stoi(argv[2]), stoi(argv[3]), stof(load1), stoi(boundary1), stof(load2), stoi(boundary2), stof(load3));
+    FibboGen gen(order);
+    int start = stoi(argv[2]);
+    if (start < 0 || start > gen.getSize() - 1) {
+        cout << "Start " << start << " is not valid for order " << order << endl;
+        return 1;
+    }
+    int target = stoi(argv[3]);
+    if (target < 0 || target > gen.getSize() - 1) {
+        cout << "Target " << target << " is not valid for order " << order << endl;
+        return 1;
+    }
+
+    bool manual = false;
+    bool log = false;
+    for (int i = 4; i < argc; i++) {
+        if (argv[i] == "-l" || argv[i] == "--log") {
+            log = true;
+        }
+        if (argv[i] == "-m" || argv[i] == "--manual") {
+            manual = true;
+        }
+    }
+
+    if (pegHypers[order] == NULL) {
+        cout << endl << "*** Manual parameters are required for order " << order << "." << endl << endl;
+        manual = true;
+    }
+
+    Hypers* hypers = NULL;
+    if (manual) {
+        string load1;
+        string boundary1;
+        string load2;
+        string boundary2;
+        string load3;
+
+        cout << "Load 1: ";
+        cin >> load1;
+        cout << "Boundary 1: ";
+        cin >> boundary1;
+        cout << "Load 2: ";
+        cin >> load2;
+        cout << "Boundary 2: ";
+        cin >> boundary2;
+        cout << "Load 2: ";
+        cin >> load3;
+
+        Hypers manual(stof(load1), stoi(boundary1), stof(load2), stoi(boundary2), stof(load3));
+        hypers = &manual;
+    } else {
+        hypers = pegHypers[order];
+    }
+
+    getSoln(order, start, target, hypers, log);
+    
+    for (int i = 0; i < pegHypers.size(); i++) {
+        if (pegHypers[i] != NULL) {
+            delete pegHypers[i];
+        }
+    }
     return 0;
 }
