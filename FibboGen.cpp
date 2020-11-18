@@ -13,6 +13,7 @@
 #include <fstream>
 #include <math.h>
 #include <map>
+#include <string.h>
 
 #include "FibboGen.h"
 #include "TreeNode.h"
@@ -601,6 +602,10 @@ __int128 getComplementIfExists(unordered_set<__int128>* a, unordered_set<__int12
     }
     if (log) cout << "Solutions found: " << solutionSet.size() << endl;
 
+    if (!log && solutionSet.size() == 0) {
+        cout << "Sorry! No solutions were found. Try different parameters next time." << endl;
+    }
+
     if (solutionSet.size() > 0) {
         return solutionSet[(int) ( getRand() * solutionSet.size() )];   
     } else {
@@ -726,11 +731,15 @@ bool getSoln(int order, int start, int target, Hypers* hypers, bool log) {
     cout << endl << endl;
     cout << "START: Position " << start << " is empty" << endl;
     cout << gen.getBoardString(solnVec[0], -1) << endl << endl;
+    cout << "Press Enter to Continue ";
+    cin.ignore();
+    cout << endl;
 
     for (int i = 0; i < solnVec.size() - 1; i++) {
         cout << "MOVE " << i + 1 << endl;
         cout << gen.getBoardString(solnVec[i], solnVec[i + 1]) << endl;
         cout << endl;
+        cin.ignore();
     }
 
     cout << "SOLVED! Position " << target << " is filled" << endl;
@@ -780,10 +789,10 @@ int main(int argc, char** argv) {
     bool manual = false;
     bool log = false;
     for (int i = 4; i < argc; i++) {
-        if (argv[i] == "-l" || argv[i] == "--log") {
+        if (strncmp(argv[i], "-l", 2) == 0 || strncmp(argv[i], "--log", 5) == 0) {
             log = true;
         }
-        if (argv[i] == "-m" || argv[i] == "--manual") {
+        if (strncmp(argv[i], "-m", 2) == 0 || strncmp(argv[i], "--manual", 8) == 0) {
             manual = true;
         }
     }
@@ -794,6 +803,7 @@ int main(int argc, char** argv) {
     }
 
     Hypers* hypers = NULL;
+    Hypers* manualHypers = NULL;
     if (manual) {
         string load1;
         string boundary1;
@@ -812,8 +822,8 @@ int main(int argc, char** argv) {
         cout << "Load 2: ";
         cin >> load3;
 
-        Hypers manual(stof(load1), stoi(boundary1), stof(load2), stoi(boundary2), stof(load3));
-        hypers = &manual;
+        manualHypers = new Hypers(stof(load1), stoi(boundary1), stof(load2), stoi(boundary2), stof(load3));
+        hypers = manualHypers;
     } else {
         hypers = pegHypers[order];
     }
@@ -824,6 +834,9 @@ int main(int argc, char** argv) {
         if (pegHypers[i] != NULL) {
             delete pegHypers[i];
         }
+    }
+    if (manual) {
+        delete manualHypers;
     }
     return 0;
 }
