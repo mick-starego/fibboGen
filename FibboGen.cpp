@@ -640,11 +640,18 @@ bool getSoln(int order, int start, int target, Hypers* hypers, bool log) {
 
             if (log) {
                 cout << endl << "Step A" << numSteps << endl;
-                cout << "Matrix: [";
+                // cout << "Matrix: [";
+                // for (int i = 0; i < size; i++) {
+                //     cout << " " << matrix[i];
+                // }
+                // cout << " ]" << endl;
+                __int128 enc = 0;
                 for (int i = 0; i < size; i++) {
-                    cout << " " << matrix[i];
+                    enc *= 2;
+                    if (matrix[i] == 1) enc++;
                 }
-                cout << " ]" << endl;
+                FibboGen matGen(order);
+                cout << matGen.getBoardString(enc, -1) << endl;
             }
 
             if (numSteps == 1) {
@@ -666,11 +673,18 @@ bool getSoln(int order, int start, int target, Hypers* hypers, bool log) {
 
             if (log) {
                 cout << endl << "Step B" << numSteps << endl;
-                cout << "Matrix: [";
+                // cout << "Matrix: [";
+                // for (int i = 0; i < size; i++) {
+                //     cout << " " << matrix[i];
+                // }
+                // cout << " ]" << endl;
+                __int128 enc = 0;
                 for (int i = 0; i < size; i++) {
-                    cout << " " << matrix[i];
+                    enc *= 2;
+                    if (matrix[i] == 1) enc++;
                 }
-                cout << " ]" << endl;
+                FibboGen matGen(order);
+                cout << matGen.getBoardString(enc, -1) << endl;
             }
 
             if (numSteps == 1) {
