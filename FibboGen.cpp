@@ -63,9 +63,9 @@ int FibboGen::getSize() {
 }
 
 void FibboGen::setDirections() {
-    dirOne = new bool*[size + order - 5];
-    dirTwo = new bool*[size + order - 5];
-    dirThree = new bool*[size + order - 5];
+    dirOne = new bool*[size + order - 2];
+    dirTwo = new bool*[size + order - 2];
+    dirThree = new bool*[size + order - 2];
     
     int nextIndex = 0;
     vector<vector<bool*>> allVecs;
@@ -82,7 +82,7 @@ void FibboGen::setDirections() {
     vector<vector<bool*>>::iterator vecIt = allVecs.begin();
     int next = 0;
     for (; vecIt != allVecs.end(); vecIt++) {
-        if (vecIt->size() < 3) continue;
+        if (vecIt->size() < 2) continue;
 
         for (int i = 0; i < vecIt->size(); i++) {
             dirOne[next] = (*vecIt)[i];
@@ -95,7 +95,7 @@ void FibboGen::setDirections() {
     // dirTwo
     int colsLeft = order;
     next = 0;
-    while (colsLeft > 2) {
+    while (colsLeft > 1) {
         for (vecIt = allVecs.begin(); vecIt != allVecs.end(); vecIt++) {
             if ((order - colsLeft) < vecIt->size()) {
                 dirTwo[next] = (*vecIt)[order - colsLeft];
@@ -110,7 +110,7 @@ void FibboGen::setDirections() {
     // dirThree
     colsLeft = order;
     next = 0;
-    while (colsLeft > 2) {
+    while (colsLeft > 1) {
         for (vecIt = allVecs.begin(); vecIt != allVecs.end(); vecIt++) {
             if ((order - colsLeft) < vecIt->size()) {
                 dirThree[next] = (*vecIt)[vecIt->size() - 1 - order + colsLeft];
@@ -192,7 +192,7 @@ unordered_set<__int128>* FibboGen::getParents(__int128 node) {
             dir = dirThree;
         }
         
-        for (int i = 0; i < (size - 2); i++) {
+        for (int i = 0; i < (size + 1); i++) {
             if (dir[i] == NULL || dir[i+1] == NULL || dir[i+2] == NULL) continue;
 
             if (*(dir[i]) == 0 && *(dir[i+1]) == 0 && *(dir[i+2]) == 1) {
@@ -240,7 +240,7 @@ unordered_set<__int128>* FibboGen::getChildren(__int128 node) {
             dir = dirThree;
         }
         
-        for (int i = 0; i < (size - 2); i++) {
+        for (int i = 0; i < (size + 1); i++) {
             if (dir[i] == NULL || dir[i+1] == NULL || dir[i+2] == NULL) continue;
 
             if (*(dir[i]) == 1 && *(dir[i+1]) == 1 && *(dir[i+2]) == 0) {
