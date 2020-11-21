@@ -412,7 +412,7 @@ int* FibboGen::getBottomLayerMatrix(int numOnes) {
         matrix[mapIt->second]++;
         numAdded++;
 
-        if (numAdded >= numOnes + pruneFactor) {
+        if (numAdded >= numOnes) {
             break;
         }
     }
