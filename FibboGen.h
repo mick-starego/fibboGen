@@ -23,6 +23,7 @@ class FibboGen {
         unordered_set<__int128>* getBottomLayer();
         unordered_set<__int128>* getNextLayer();
         int* getBottomLayerMatrix(int numOnes);
+        int* consolidateMatrix(int* matrix, int pF);
 
         vector<__int128>* getFirstHalfOfSoln(__int128 enc);
 

@@ -305,6 +305,8 @@ int FibboGen::getScore(__int128 enc, int* matrix) {
     for (int i = 0; i < size; i++) {
         if (board[i] == 1) {
             score += matrix[i];
+        } else if (matrix[i] == 0) {
+            score += 1;
         }
     }
 
@@ -333,9 +335,11 @@ void FibboGen::stepDown(float load, int* matrix) {
     }
     auto mapIt = scoreMap.cbegin();
     int numAdded = 0;
+    int totalScore = 0;
     for (; mapIt != scoreMap.cend(); mapIt++) {
         if (next->find(mapIt->second) == next->end()) {
             next->insert(mapIt->second);
+            totalScore += mapIt->first;
             numAdded++;
         }
 
@@ -343,6 +347,7 @@ void FibboGen::stepDown(float load, int* matrix) {
             break;
         }
     }
+    cout << "Average score (lower is better): " << totalScore / numAdded << endl;
 }
 
 void FibboGen::takeFirstStep(float load, int* matrix) {
@@ -372,6 +377,8 @@ void FibboGen::takeFirstStep(float load, int* matrix) {
 
 
 int* FibboGen::getBottomLayerMatrix(int numOnes) {
+    int pruneFactor = 7; // MAY WANT TO PASS THIS IN
+
     int* rawMatrix = new int[size] {0};
     unordered_set<__int128>* bottom = getBottomLayer();
 
@@ -405,10 +412,71 @@ int* FibboGen::getBottomLayerMatrix(int numOnes) {
         matrix[mapIt->second]++;
         numAdded++;
 
-        if (numAdded >= numOnes) {
+        if (numAdded >= numOnes + pruneFactor) {
             break;
         }
     }
+    // return consolidateMatrix(matrix, pruneFactor);
+    return matrix;
+}
+
+int* FibboGen::consolidateMatrix(int* matrix, int pF) {
+
+    // Initialize neighbor matrix to -1
+    int* M_n = new int[size] {0};
+    for (int i = 0; i < size; i++) {
+        M_n[i] = -1;
+    }
+
+    // Load matrix into board
+    __int128 hold = getEncodedBoard();
+    __int128 enc = 0;
+    for (int i = 0; i < size; i++) {
+        enc *= 2;
+        if (matrix[i] == 1) enc++;
+    }
+    setBoard(enc);
+
+    // Calculate num neighbors
+    // for (int d = 0; d < 3; d++) {
+
+    //     if (d == 0) {
+    //         dir = dirOne;
+    //     } else if (d == 1) {
+    //         dir = dirTwo;
+    //     } else {
+    //         dir = dirThree;
+    //     }
+        
+    //     for (int i = 0; i < (size - 2); i++) {
+    //         if (dir[i] == NULL || dir[i+1] == NULL || dir[i+2] == NULL) continue;
+
+    //         if (*(dir[i]) == 0 && *(dir[i+1]) == 0 && *(dir[i+2]) == 1) {
+    //             *(dir[i]) = 1;
+    //             *(dir[i+1]) = 1;
+    //             *(dir[i+2]) = 0;
+                
+    //             result->insert(encodeCurrentBoard());
+
+    //             *(dir[i]) = 0;
+    //             *(dir[i+1]) = 0;
+    //             *(dir[i+2]) = 1;
+                
+    //         } else if (*(dir[i]) == 1 && *(dir[i+1]) == 0 && *(dir[i+2]) == 0) {
+    //             *(dir[i]) = 0;
+    //             *(dir[i+1]) = 1;
+    //             *(dir[i+2]) = 1;
+                
+    //             result->insert(encodeCurrentBoard());
+                
+    //             *(dir[i]) = 1;
+    //             *(dir[i+1]) = 0;
+    //             *(dir[i+2]) = 0;
+    //         }
+    //     }
+    // }
+
+    setBoard(hold);
     return matrix;
 }
 
@@ -854,3 +922,25 @@ int main(int argc, char** argv) {
     }
     return 0;
 }
+
+// int main() {
+//     int M[] = {0,1,1,0,0,0,1,0,0,1,1,1,1,1,0,1,1,1,1,1,0,0,0,1,1,0,0,0,0,0,0,0,1,0,0,0};
+//     int MPrimeExpected[] = {0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,1,1,1,0,0,0,0,1,1,0,0,0,0,0,0,0,1,0,0,0};
+
+//     FibboGen gen(8);
+//     int* MPrime = gen.consolidateMatrix(M, 7);
+
+//     cout << "Actual  : ";
+//     for (int i = 0; i < 36; i++) {
+//         cout << MPrime[i] << " ";
+//     }
+//     cout << endl;
+
+//     cout << "Expected: ";
+//     for (int i = 0; i < 36; i++) {
+//         cout << MPrimeExpected[i] << " ";
+//     }
+//     cout << endl;
+
+//     return 0;
+// }
