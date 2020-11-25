@@ -122,11 +122,6 @@ void FibboGen::setDirections() {
         colsLeft--;
     }
 
-    // for (int i = 0; i < size; i++){
-    //     cout << board[i] << " ";
-    // }
-    // cout << endl;
-
 }
 
 int FibboGen::calculateSize(int order) const {
@@ -192,7 +187,7 @@ unordered_set<__int128>* FibboGen::getParents(__int128 node) {
             dir = dirThree;
         }
         
-        for (int i = 0; i < (size + 1); i++) {
+        for (int i = 0; i < (size + order - 2); i++) {
             if (dir[i] == NULL || dir[i+1] == NULL || dir[i+2] == NULL) continue;
 
             if (*(dir[i]) == 0 && *(dir[i+1]) == 0 && *(dir[i+2]) == 1) {
@@ -240,7 +235,7 @@ unordered_set<__int128>* FibboGen::getChildren(__int128 node) {
             dir = dirThree;
         }
         
-        for (int i = 0; i < (size + 1); i++) {
+        for (int i = 0; i < (size + order - 2); i++) {
             if (dir[i] == NULL || dir[i+1] == NULL || dir[i+2] == NULL) continue;
 
             if (*(dir[i]) == 1 && *(dir[i+1]) == 1 && *(dir[i+2]) == 0) {
@@ -347,7 +342,7 @@ void FibboGen::stepDown(float load, int* matrix) {
             break;
         }
     }
-    cout << "Average score (lower is better): " << totalScore / numAdded << endl;
+    // cout << "Average score (lower is better): " << totalScore / numAdded << endl;
 }
 
 void FibboGen::takeFirstStep(float load, int* matrix) {
@@ -378,6 +373,10 @@ void FibboGen::takeFirstStep(float load, int* matrix) {
 
 int* FibboGen::getBottomLayerMatrix(int numOnes) {
     int pruneFactor = 7; // MAY WANT TO PASS THIS IN
+
+    if (size - numOnes + 3 > pruneFactor) {
+        pruneFactor = 0;
+    }
 
     int* rawMatrix = new int[size] {0};
     unordered_set<__int128>* bottom = getBottomLayer();
@@ -412,12 +411,11 @@ int* FibboGen::getBottomLayerMatrix(int numOnes) {
         matrix[mapIt->second]++;
         numAdded++;
 
-        if (numAdded >= numOnes) {
+        if (numAdded >= numOnes + pruneFactor) {
             break;
         }
     }
-    // return consolidateMatrix(matrix, pruneFactor);
-    return matrix;
+    return consolidateMatrix(matrix, pruneFactor);
 }
 
 int* FibboGen::consolidateMatrix(int* matrix, int pF) {
@@ -438,46 +436,66 @@ int* FibboGen::consolidateMatrix(int* matrix, int pF) {
     setBoard(enc);
 
     // Calculate num neighbors
-    // for (int d = 0; d < 3; d++) {
+    bool* (*dir) = NULL;
 
-    //     if (d == 0) {
-    //         dir = dirOne;
-    //     } else if (d == 1) {
-    //         dir = dirTwo;
-    //     } else {
-    //         dir = dirThree;
-    //     }
+    for (int d = 0; d < 3; d++) {
+
+        if (d == 0) {
+            dir = dirOne;
+        } else if (d == 1) {
+            dir = dirTwo;
+        } else {
+            dir = dirThree;
+        }
         
-    //     for (int i = 0; i < (size - 2); i++) {
-    //         if (dir[i] == NULL || dir[i+1] == NULL || dir[i+2] == NULL) continue;
+        for (int i = 0; i < (size + order - 2); i++) {
+            if (dir[i] != NULL && *(dir[i]) == 1) {
+                int boardIndex = findBoardIndex(dir[i]);
+                if (M_n[boardIndex] == -1) {
+                    M_n[boardIndex] = 0;
+                } 
+                if (i < (size + order - 1) && dir[i+1] != NULL && *(dir[i+1]) == 1) {
+                    M_n[boardIndex]++;
+                }
+                if (i > 0 && dir[i-1] != NULL && *(dir[i-1]) == 1) {
+                    M_n[boardIndex]++;
+                }
+            } 
+        }
+    }
 
-    //         if (*(dir[i]) == 0 && *(dir[i+1]) == 0 && *(dir[i+2]) == 1) {
-    //             *(dir[i]) = 1;
-    //             *(dir[i+1]) = 1;
-    //             *(dir[i+2]) = 0;
-                
-    //             result->insert(encodeCurrentBoard());
+    // Convert M_n to multimap
+    multimap<int, __int128> numNeighbors;
+    for (int i = 0; i < size; i++) {
+        if (M_n[i] != -1) {
+            numNeighbors.insert({M_n[i] ,i});
+        }
+    }
+    delete[] M_n;
 
-    //             *(dir[i]) = 0;
-    //             *(dir[i+1]) = 0;
-    //             *(dir[i+2]) = 1;
-                
-    //         } else if (*(dir[i]) == 1 && *(dir[i+1]) == 0 && *(dir[i+2]) == 0) {
-    //             *(dir[i]) = 0;
-    //             *(dir[i+1]) = 1;
-    //             *(dir[i+2]) = 1;
-                
-    //             result->insert(encodeCurrentBoard());
-                
-    //             *(dir[i]) = 1;
-    //             *(dir[i+1]) = 0;
-    //             *(dir[i+2]) = 0;
-    //         }
-    //     }
-    // }
+    // Remove lowest scores from matrix
+    int numAdded = 0;
+    auto mapIt = numNeighbors.cbegin();
+    for (; mapIt != numNeighbors.cend(); mapIt++) {
+        matrix[mapIt->second] = 0;
+        numAdded++;
+
+        if (numAdded >= pF) {
+            break;
+        }
+    }
 
     setBoard(hold);
     return matrix;
+}
+
+int FibboGen::findBoardIndex(bool* p) {
+    for (int i = 0; i < size; i++) {
+        if (p == &(board[i])) {
+            return i;
+        }
+    }
+    return -1;
 }
 
 // Will segfault if boardNodes is not populated
@@ -846,8 +864,8 @@ int main(int argc, char** argv) {
         new Hypers(1.9, 5, 1.5, 15, 1.4),
         new Hypers(1.9, 5, 1.4, 20, 1.3),
         NULL,
-        NULL,
-        NULL
+        new Hypers(1.8, 4, 1.3, 30, 1.1),
+        new Hypers(1.8, 4, 1.3, 25, 1.1),
     };
 
     int order = stoi(argv[1]);
@@ -922,25 +940,3 @@ int main(int argc, char** argv) {
     }
     return 0;
 }
-
-// int main() {
-//     int M[] = {0,1,1,0,0,0,1,0,0,1,1,1,1,1,0,1,1,1,1,1,0,0,0,1,1,0,0,0,0,0,0,0,1,0,0,0};
-//     int MPrimeExpected[] = {0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,1,1,1,0,0,0,0,1,1,0,0,0,0,0,0,0,1,0,0,0};
-
-//     FibboGen gen(8);
-//     int* MPrime = gen.consolidateMatrix(M, 7);
-
-//     cout << "Actual  : ";
-//     for (int i = 0; i < 36; i++) {
-//         cout << MPrime[i] << " ";
-//     }
-//     cout << endl;
-
-//     cout << "Expected: ";
-//     for (int i = 0; i < 36; i++) {
-//         cout << MPrimeExpected[i] << " ";
-//     }
-//     cout << endl;
-
-//     return 0;
-// }

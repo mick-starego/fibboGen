@@ -47,6 +47,7 @@ class FibboGen {
         void setDirections();
         int calculateSize(int order) const;
         void setBoard(__int128 enc);
+        int findBoardIndex(bool* p);
         __int128 encodeCurrentBoard();
         int getNodeCountAtLayer(int level);
         int getScore(__int128 enc, int* matrix);
