@@ -826,24 +826,25 @@ bool getSoln(int order, int start, int target, Hypers* hypers, bool log) {
     if (solnVec.size() != size - 1) {
         cout << "Solution vector is not the correct size" << endl;
     }
+    return false;
 
     // Print solution
-    cout << endl << endl;
-    cout << "START: Position " << start << " is empty" << endl;
-    cout << gen.getBoardString(solnVec[0], -1) << endl << endl;
-    cout << "Press Enter to Continue ";
-    cin.ignore();
-    cout << endl;
+    // cout << endl << endl;
+    // cout << "START: Position " << start << " is empty" << endl;
+    // cout << gen.getBoardString(solnVec[0], -1) << endl << endl;
+    // cout << "Press Enter to Continue ";
+    // cin.ignore();
+    // cout << endl;
 
-    for (int i = 0; i < solnVec.size() - 1; i++) {
-        cout << "MOVE " << i + 1 << endl;
-        cout << gen.getBoardString(solnVec[i], solnVec[i + 1]) << endl;
-        cout << endl;
-        cin.ignore();
-    }
+    // for (int i = 0; i < solnVec.size() - 1; i++) {
+    //     cout << "MOVE " << i + 1 << endl;
+    //     cout << gen.getBoardString(solnVec[i], solnVec[i + 1]) << endl;
+    //     cout << endl;
+    //     cin.ignore();
+    // }
 
-    cout << "SOLVED! Position " << target << " is filled" << endl;
-    cout << gen.getBoardString(solnVec[solnVec.size() - 1], -1) << endl;
+    // cout << "SOLVED! Position " << target << " is filled" << endl;
+    // cout << gen.getBoardString(solnVec[solnVec.size() - 1], -1) << endl;
 
     delete halfA;
     delete halfB;
