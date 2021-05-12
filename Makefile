@@ -1,5 +1,5 @@
 CXX = clang++ $(CXXFLAGS)
-CXXFLAGS = -g -Wall -O2 -fsanitize=leak,address
+CXXFLAGS = -g -Wall -O2
 
 OBJECTS = FibboGen.o Hypers.o timer.o
 

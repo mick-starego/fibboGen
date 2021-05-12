@@ -330,11 +330,11 @@ void FibboGen::stepDown(float load, int* matrix) {
     }
     auto mapIt = scoreMap.cbegin();
     int numAdded = 0;
-    int totalScore = 0;
+    // int totalScore = 0;
     for (; mapIt != scoreMap.cend(); mapIt++) {
         if (next->find(mapIt->second) == next->end()) {
             next->insert(mapIt->second);
-            totalScore += mapIt->first;
+            // totalScore += mapIt->first;
             numAdded++;
         }
 
@@ -342,6 +342,13 @@ void FibboGen::stepDown(float load, int* matrix) {
             break;
         }
     }
+    // for (int i = 0; i < size; i++) {
+    //     int c = scoreMap.count(i);
+    //     if (c != 0) {
+    //         cout << i << ": " << c << endl;
+    //     }
+    // }
+    // cout << "Num Added: " << numAdded;
     // cout << "Average score (lower is better): " << totalScore / numAdded << endl;
 }
 
@@ -718,6 +725,9 @@ bool getSoln(int order, int start, int target, Hypers* hypers, bool log) {
     int stepsBTaken = 0;
     int* matrix = genB.getBottomLayerMatrix(size - 1);
 
+    timer t;
+    t.start();
+
     while (numSteps < stepsA || numSteps < stepsB) {
         numSteps++;
 
@@ -827,6 +837,9 @@ bool getSoln(int order, int start, int target, Hypers* hypers, bool log) {
         cout << "Solution vector is not the correct size" << endl;
     }
 
+    t.stop();
+    cout << "Solved in " << t.getTime() << " seconds" << endl;
+
     // Print solution
     cout << endl << endl;
     cout << "START: Position " << start << " is empty" << endl;
@@ -854,22 +867,23 @@ bool getSoln(int order, int start, int target, Hypers* hypers, bool log) {
 int main(int argc, char** argv) {
     srand(time(NULL));
     vector<Hypers*> pegHypers = {
-        NULL, NULL, NULL, NULL, NULL,
+        NULL, NULL, NULL, NULL,
         new Hypers(2),
         new Hypers(2),
-        NULL,
+        new Hypers(2),
         new Hypers(2, 4, 1.6),
         new Hypers(2, 4, 1.6),
-        NULL,
+        new Hypers(2, 4, 1.6),
+        new Hypers(1.9, 5, 1.5),
         new Hypers(1.9, 5, 1.5, 15, 1.4),
         new Hypers(1.9, 5, 1.4, 20, 1.3),
-        NULL,
+        new Hypers(1.8, 5, 1.4, 25, 1.1),
         new Hypers(1.8, 4, 1.3, 30, 1.1),
-        new Hypers(1.8, 4, 1.3, 25, 1.1),
+        new Hypers(2, 13, 2.5, 20, 0.96),
     };
 
     int order = stoi(argv[1]);
-    if (order < 5 || order > 15) {
+    if (order < 4 || order > 15) {
         cout << "Order " << order << " is invalid" << endl;
         return 1;
     }
